@@ -1,0 +1,12 @@
+services:
+  - type: cron
+    name: acm-scraper-guayaquil
+    env: python
+    schedule: "0 6 * * *"   # Cada día a las 6 AM (hora Ecuador = UTC-5 → 11 AM UTC)
+    buildCommand: pip install -r scraper/requirements.txt && playwright install chromium --with-deps
+    startCommand: python scraper/scraper.py
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

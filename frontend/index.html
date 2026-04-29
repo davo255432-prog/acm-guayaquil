@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ACM — Análisis Comparativo de Mercado | Guayaquil</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#1a56db', dark: '#1e429f', light: '#ebf3fe' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .card-hover { transition: box-shadow .2s, transform .2s; }
+    .card-hover:hover { box-shadow: 0 8px 24px rgba(0,0,0,.1); transform: translateY(-2px); }
+    #loader { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- ── HEADER ── -->
+  <header class="bg-brand shadow">
+    <div class="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
+      <div>
+        <h1 class="text-white text-2xl font-bold tracking-tight">ACM Guayaquil</h1>
+        <p class="text-blue-200 text-sm mt-0.5">Análisis Comparativo de Mercado · Datos en tiempo real</p>
+      </div>
+      <span class="text-blue-200 text-xs hidden sm:block">Fuente: Plusvalía.com</span>
+    </div>
+  </header>
+
+  <!-- ── FORMULARIO DE BÚSQUEDA ── -->
+  <main class="max-w-5xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Selecciona la propiedad a valorar</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Sector</label>
+          <select id="sector" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+            <option value="">— Seleccionar sector —</option>
+            <option value="Samborondón">Samborondón</option>
+            <option value="La Puntilla">La Puntilla</option>
+            <option value="Norte de Guayaquil">Norte de Guayaquil</option>
+            <option value="Los Ceibos">Los Ceibos</option>
+            <option value="Centro de Guayaquil">Centro de Guayaquil</option>
+            <option value="Vía a la Costa">Vía a la Costa</option>
+            <option value="Av. León Febres Cordero">Av. León Febres Cordero</option>
+            <option value="Vía a Salitre">Vía a Salitre</option>
+            <option value="Narcisa de Jesús">Narcisa de Jesús</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de inmueble</label>
+          <select id="tipo" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+            <option value="">— Seleccionar tipo —</option>
+            <option value="Casa">Casa</option>
+            <option value="Departamento">Departamento</option>
+            <option value="Oficina">Oficina</option>
+            <option value="Consultorio">Consultorio</option>
+            <option value="Terreno">Terreno</option>
+            <option value="Local Comercial">Local Comercial</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Área del inmueble (m²) <span class="text-gray-400 font-normal">opcional</span></label>
+          <input id="area" type="number" min="1" placeholder="ej. 120"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Precio mínimo (USD) <span class="text-gray-400 font-normal">opcional</span></label>
+          <input id="precio-min" type="number" min="0" placeholder="ej. 80000"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Precio máximo (USD) <span class="text-gray-400 font-normal">opcional</span></label>
+          <input id="precio-max" type="number" min="0" placeholder="ej. 200000"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+        </div>
+      </div>
+
+      <button id="btn-buscar"
+        class="mt-5 w-full sm:w-auto bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-lg transition-colors text-sm">
+        Analizar mercado
+      </button>
+    </div>
+
+    <!-- ── LOADER ── -->
+    <div id="loader-wrap" class="hidden flex justify-center py-12">
+      <svg id="loader" class="w-10 h-10 text-brand" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+      </svg>
+    </div>
+
+    <!-- ── RESULTADOS ACM ── -->
+    <div id="resultados" class="hidden">
+
+      <!-- Resumen estadístico -->
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-3" id="titulo-resultados"></h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="stats-grid"></div>
+      </div>
+
+      <!-- Estimación de valor (si ingresó m²) -->
+      <div id="estimacion-wrap" class="hidden bg-brand-light border border-brand rounded-2xl p-5 mb-6">
+        <p class="text-sm text-brand font-medium mb-1">Valor estimado de tu inmueble</p>
+        <p id="estimacion-valor" class="text-3xl font-bold text-brand-dark"></p>
+        <p id="estimacion-detalle" class="text-xs text-gray-500 mt-1"></p>
+      </div>
+
+      <!-- Lista de comparables -->
+      <div>
+        <h3 class="text-base font-semibold text-gray-700 mb-3">Propiedades comparables</h3>
+        <div id="lista-comparables" class="space-y-3"></div>
+        <p id="sin-resultados" class="hidden text-center text-gray-400 py-10 text-sm">
+          No se encontraron propiedades con esos filtros. Intenta ampliar el rango de precios.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- ── ERROR ── -->
+    <div id="error-wrap" class="hidden bg-red-50 border border-red-200 rounded-2xl p-5 text-sm text-red-700">
+      <strong>Error al cargar los datos.</strong> Verifica tu conexión o contacta al administrador.
+    </div>
+
+  </main>
+
+  <footer class="text-center text-xs text-gray-400 py-8">
+    Datos actualizados diariamente desde Plusvalía.com · ACM Guayaquil
+  </footer>
+
+  <!-- ── LÓGICA ── -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+    // ── CONFIGURAR CON TUS CREDENCIALES DE SUPABASE ──────────────────────────
+    const SUPABASE_URL  = 'https://TU_PROYECTO.supabase.co'   // ← reemplazar
+    const SUPABASE_ANON = 'TU_ANON_KEY'                       // ← reemplazar (anon/public)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON)
+
+    const fmt = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+    const fmtM2 = (v) => `${new Intl.NumberFormat('es-EC', { maximumFractionDigits: 0 }).format(v)} USD/m²`
+
+    document.getElementById('btn-buscar').addEventListener('click', buscar)
+
+    async function buscar() {
+      const sector   = document.getElementById('sector').value
+      const tipo     = document.getElementById('tipo').value
+      const area     = parseFloat(document.getElementById('area').value) || null
+      const preMin   = parseFloat(document.getElementById('precio-min').value) || null
+      const preMax   = parseFloat(document.getElementById('precio-max').value) || null
+
+      if (!sector || !tipo) {
+        alert('Selecciona sector y tipo de inmueble.')
+        return
+      }
+
+      mostrarLoader(true)
+      ocultarResultados()
+
+      try {
+        let query = db
+          .from('listings')
+          .select('*')
+          .eq('sector', sector)
+          .eq('tipo', tipo)
+          .eq('activo', true)
+          .order('fecha_scrape', { ascending: false })
+          .limit(200)
+
+        if (preMin) query = query.gte('precio', preMin)
+        if (preMax) query = query.lte('precio', preMax)
+
+        const { data, error } = await query
+        if (error) throw error
+
+        mostrarLoader(false)
+        renderResultados(data || [], sector, tipo, area)
+      } catch (err) {
+        mostrarLoader(false)
+        document.getElementById('error-wrap').classList.remove('hidden')
+        console.error(err)
+      }
+    }
+
+    function renderResultados(listings, sector, tipo, areaIngresada) {
+      const wrap = document.getElementById('resultados')
+      wrap.classList.remove('hidden')
+
+      // ── Estadísticas ──────────────────────────────────────────────
+      const conPrecio = listings.filter(l => l.precio > 0)
+      const conM2     = listings.filter(l => l.precio_m2 > 0)
+
+      document.getElementById('titulo-resultados').textContent =
+        `${tipo}s en ${sector} — ${conPrecio.length} comparables encontrados`
+
+      const avg   = promedio(conPrecio.map(l => l.precio))
+      const mn    = Math.min(...conPrecio.map(l => l.precio))
+      const mx    = Math.max(...conPrecio.map(l => l.precio))
+      const avgM2 = promedio(conM2.map(l => l.precio_m2))
+
+      const stats = [
+        { label: 'Precio promedio',    valor: avg   ? fmt.format(avg)   : '—' },
+        { label: 'Precio mínimo',      valor: conPrecio.length ? fmt.format(mn) : '—' },
+        { label: 'Precio máximo',      valor: conPrecio.length ? fmt.format(mx) : '—' },
+        { label: 'Promedio USD/m²',    valor: avgM2 ? fmtM2(avgM2) : '—' },
+      ]
+
+      document.getElementById('stats-grid').innerHTML = stats.map(s => `
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <p class="text-xs text-gray-500 mb-1">${s.label}</p>
+          <p class="text-xl font-bold text-gray-800">${s.valor}</p>
+        </div>
+      `).join('')
+
+      // ── Estimación de valor ───────────────────────────────────────
+      const estWrap = document.getElementById('estimacion-wrap')
+      if (areaIngresada && avgM2) {
+        const estimado = areaIngresada * avgM2
+        document.getElementById('estimacion-valor').textContent = fmt.format(estimado)
+        document.getElementById('estimacion-detalle').textContent =
+          `${areaIngresada} m² × ${fmtM2(avgM2)} (precio promedio del sector)`
+        estWrap.classList.remove('hidden')
+      } else {
+        estWrap.classList.add('hidden')
+      }
+
+      // ── Lista de comparables ──────────────────────────────────────
+      const lista = document.getElementById('lista-comparables')
+      const sinRes = document.getElementById('sin-resultados')
+
+      if (listings.length === 0) {
+        lista.innerHTML = ''
+        sinRes.classList.remove('hidden')
+        return
+      }
+      sinRes.classList.add('hidden')
+
+      lista.innerHTML = listings.slice(0, 50).map(l => `
+        <a href="${l.url_fuente}" target="_blank" rel="noopener"
+           class="card-hover block bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-4">
+          ${l.imagen_url ? `
+            <img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block"
+              onerror="this.style.display='none'" />` : ''}
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-800 text-sm truncate">${l.titulo || tipo + ' en ' + sector}</p>
+            <p class="text-xs text-gray-500 mt-0.5 truncate">${l.direccion || sector}</p>
+            <div class="flex flex-wrap gap-3 mt-2 text-xs text-gray-600">
+              ${l.precio    ? `<span class="font-bold text-brand text-sm">${fmt.format(l.precio)}</span>` : ''}
+              ${l.area_m2   ? `<span>${l.area_m2} m²</span>` : ''}
+              ${l.precio_m2 ? `<span>${fmtM2(l.precio_m2)}</span>` : ''}
+              ${l.habitaciones ? `<span>${l.habitaciones} dorm.</span>` : ''}
+              ${l.banos        ? `<span>${l.banos} baños</span>` : ''}
+            </div>
+          </div>
+          <div class="flex-shrink-0 text-blue-400 self-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+          </div>
+        </a>
+      `).join('')
+    }
+
+    function promedio(arr) {
+      if (!arr.length) return null
+      return arr.reduce((a, b) => a + b, 0) / arr.length
+    }
+
+    function mostrarLoader(show) {
+      document.getElementById('loader-wrap').classList.toggle('hidden', !show)
+    }
+
+    function ocultarResultados() {
+      document.getElementById('resultados').classList.add('hidden')
+      document.getElementById('error-wrap').classList.add('hidden')
+    }
+  </script>
+</body>
+</html>
