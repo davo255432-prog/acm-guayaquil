@@ -1,6 +1,6 @@
 """
 ACM Guayaquil — Scraper de Plusvalía.com
-Usa Playwright (navegador real) para evitar bloqueos.
+Usa httpx + BeautifulSoup (sin navegador) para máxima compatibilidad.
 Corre automáticamente cada 24h en Render.com.
 """
 
@@ -9,13 +9,14 @@ import logging
 import re
 import time
 
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+import httpx
+from bs4 import BeautifulSoup
 from supabase import create_client
 
 from config import (
     SUPABASE_URL, SUPABASE_KEY,
     SECTORES, TIPOS,
-    MAX_PAGINAS, DELAY_SEGUNDOS, TIMEOUT_MS,
+    MAX_PAGINAS, DELAY_SEGUNDOS,
     build_url,
 )
 
@@ -26,26 +27,24 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "es-EC,es;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+
 
 # ---------------------------------------------------------------------------
-# Extracción de datos
+# Parsers de texto
 # ---------------------------------------------------------------------------
-
-def extraer_numero(texto: str) -> float | None:
-    """Extrae el primer número (con decimales) de un string."""
-    if not texto:
-        return None
-    limpio = texto.replace(",", "").replace(".", "")
-    # Volver a poner el separador decimal correcto
-    match = re.search(r"[\d]+(?:[.,]\d+)?", texto.replace(".", "").replace(",", "."))
-    m = re.search(r"[\d]+(?:\.\d+)?", limpio)
-    return float(m.group()) if m else None
-
 
 def parsear_precio(texto: str) -> float | None:
     if not texto:
         return None
-    # Quitar símbolos y espacios, dejar solo dígitos
     solo_numeros = re.sub(r"[^\d]", "", texto)
     return float(solo_numeros) if solo_numeros else None
 
@@ -64,18 +63,17 @@ def parsear_entero(texto: str) -> int | None:
     return int(m.group()) if m else None
 
 
-def extraer_json_nextjs(page) -> list[dict]:
-    """
-    Intenta extraer listings del JSON embebido de Next.js (__NEXT_DATA__).
-    Si Plusvalía usa Next.js, esto devuelve datos estructurados sin parsear HTML.
-    """
+# ---------------------------------------------------------------------------
+# Extracción desde JSON de Next.js (__NEXT_DATA__)
+# ---------------------------------------------------------------------------
+
+def extraer_json_nextjs(html: str) -> list[dict]:
     try:
-        raw = page.evaluate("() => document.getElementById('__NEXT_DATA__')?.textContent")
-        if not raw:
+        soup = BeautifulSoup(html, "html.parser")
+        tag = soup.find("script", id="__NEXT_DATA__")
+        if not tag:
             return []
-        data = json.loads(raw)
-        # Navegar la estructura hasta encontrar los listings
-        # La ruta exacta depende de la versión de Plusvalía — ajustar si cambia
+        data = json.loads(tag.string)
         props = data.get("props", {}).get("pageProps", {})
         listings_raw = (
             props.get("listings") or
@@ -91,7 +89,6 @@ def extraer_json_nextjs(page) -> list[dict]:
 
 
 def parsear_listing_json(item: dict, sector_nombre: str, tipo_nombre: str) -> dict | None:
-    """Convierte un item del JSON de Next.js en el formato de Supabase."""
     try:
         url = item.get("permalink") or item.get("url") or item.get("link")
         if not url:
@@ -102,7 +99,7 @@ def parsear_listing_json(item: dict, sector_nombre: str, tipo_nombre: str) -> di
         precio_raw = (
             item.get("price") or
             item.get("precio") or
-            item.get("prices", {}).get("price")
+            (item.get("prices") or {}).get("price")
         )
         area_raw = (
             item.get("surface") or
@@ -124,97 +121,82 @@ def parsear_listing_json(item: dict, sector_nombre: str, tipo_nombre: str) -> di
             "banos":        parsear_entero(str(item.get("bathrooms", "") or item.get("banos", ""))),
             "parqueos":     parsear_entero(str(item.get("parking", "") or item.get("garages", ""))),
             "titulo":       str(item.get("title") or item.get("titulo") or "")[:500],
-            "direccion":    str(item.get("address") or item.get("location", {}).get("label") or "")[:300],
+            "direccion":    str(item.get("address") or (item.get("location") or {}).get("label") or "")[:300],
             "url_fuente":   url,
-            "imagen_url":   str(item.get("photos", [{}])[0].get("url") if item.get("photos") else "")[:500] or None,
+            "imagen_url":   (str(item.get("photos", [{}])[0].get("url")) if item.get("photos") else None),
         }
     except Exception as e:
         log.debug(f"Error parseando item JSON: {e}")
         return None
 
 
-def parsear_cards_dom(page, sector_nombre: str, tipo_nombre: str) -> list[dict]:
-    """
-    Parsea los listing cards desde el DOM cuando no hay JSON disponible.
-    Prueba múltiples selectores en orden — ajustar si Plusvalía cambia su HTML.
-    """
+# ---------------------------------------------------------------------------
+# Extracción desde HTML (fallback)
+# ---------------------------------------------------------------------------
+
+def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
     resultados = []
 
-    # Selectores de cards (probar en orden hasta encontrar el correcto)
-    card_selectors = [
-        "[data-qa='posting CARD']",
-        "[data-qa='POSTING_CARD']",
-        ".posting-card",
-        ".listing-card",
-        ".property-card",
-        "article[class*='posting']",
-        "article[class*='listing']",
-        "div[class*='postingCard']",
-        "div[class*='listing-item']",
-    ]
-
     cards = []
-    for selector in card_selectors:
-        cards = page.query_selector_all(selector)
+    for selector in [
+        {"data-qa": "posting CARD"},
+        {"data-qa": "POSTING_CARD"},
+    ]:
+        cards = soup.find_all(attrs=selector)
         if cards:
-            log.info(f"  Selector encontrado: {selector} ({len(cards)} cards)")
             break
 
     if not cards:
-        log.warning("  No se encontraron cards — verificar selectores en config")
+        for cls in ["posting-card", "listing-card", "property-card"]:
+            cards = soup.find_all(class_=re.compile(cls, re.I))
+            if cards:
+                break
+
+    if not cards:
+        log.warning("  No se encontraron cards en el HTML")
         return []
+
+    log.info(f"  {len(cards)} cards encontrados en DOM")
 
     for card in cards:
         try:
-            # URL del listing
-            link_el = card.query_selector("a[href*='/propiedades/'], a[href*='/inmuebles/'], a[href]")
-            url = link_el.get_attribute("href") if link_el else None
-            if not url:
+            link = card.find("a", href=True)
+            if not link:
                 continue
+            url = link["href"]
             if not url.startswith("http"):
                 url = "https://www.plusvalia.com" + url
 
-            # Precio
-            precio_el = card.query_selector(
-                "[data-qa='POSTING_CARD_PRICE'], "
-                ".price, .precio, "
-                "[class*='price'], [class*='Price']"
+            texto = card.get_text(" ", strip=True)
+
+            precio_el = (
+                card.find(attrs={"data-qa": "POSTING_CARD_PRICE"}) or
+                card.find(class_=re.compile(r"price|precio", re.I))
             )
-            precio = parsear_precio(precio_el.inner_text() if precio_el else "")
+            precio = parsear_precio(precio_el.get_text() if precio_el else "")
+            area = parsear_area(texto)
 
-            # Título
-            titulo_el = card.query_selector(
-                "[data-qa='POSTING_CARD_DESCRIPTION'], "
-                "h2, h3, [class*='title'], [class*='Title']"
+            titulo_el = (
+                card.find(attrs={"data-qa": "POSTING_CARD_DESCRIPTION"}) or
+                card.find(["h2", "h3"])
             )
-            titulo = titulo_el.inner_text().strip()[:500] if titulo_el else ""
+            titulo = titulo_el.get_text(strip=True)[:500] if titulo_el else ""
 
-            # Dirección
-            dir_el = card.query_selector(
-                "[data-qa='POSTING_CARD_LOCATION'], "
-                "[class*='location'], [class*='address'], [class*='direccion']"
-            )
-            direccion = dir_el.inner_text().strip()[:300] if dir_el else ""
+            dir_el = card.find(attrs={"data-qa": "POSTING_CARD_LOCATION"})
+            direccion = dir_el.get_text(strip=True)[:300] if dir_el else ""
 
-            # Imagen
-            img_el = card.query_selector("img")
-            imagen_url = (img_el.get_attribute("src") or img_el.get_attribute("data-src") or "") if img_el else ""
+            img = card.find("img")
+            imagen_url = (img.get("src") or img.get("data-src") or "") if img else ""
 
-            # Características (m², habitaciones, baños, parqueos)
-            features_text = card.inner_text()
-            area   = parsear_area(features_text)
-            hab    = None
-            banos  = None
-            parq   = None
-
-            # Buscar números junto a palabras clave
-            m = re.search(r"(\d+)\s*(?:dorm|hab|recám)", features_text, re.IGNORECASE)
+            hab = banos = parq = None
+            m = re.search(r"(\d+)\s*(?:dorm|hab|recám)", texto, re.I)
             if m:
                 hab = int(m.group(1))
-            m = re.search(r"(\d+)\s*(?:baño|bano|bath)", features_text, re.IGNORECASE)
+            m = re.search(r"(\d+)\s*(?:baño|bano|bath)", texto, re.I)
             if m:
                 banos = int(m.group(1))
-            m = re.search(r"(\d+)\s*(?:parq|garage|est)", features_text, re.IGNORECASE)
+            m = re.search(r"(\d+)\s*(?:parq|garage|est)", texto, re.I)
             if m:
                 parq = int(m.group(1))
 
@@ -230,11 +212,10 @@ def parsear_cards_dom(page, sector_nombre: str, tipo_nombre: str) -> list[dict]:
                 "titulo":       titulo,
                 "direccion":    direccion,
                 "url_fuente":   url,
-                "imagen_url":   imagen_url[:500] if imagen_url else None,
+                "imagen_url":   imagen_url[:500] or None,
             })
         except Exception as e:
-            log.debug(f"Error parseando card DOM: {e}")
-            continue
+            log.debug(f"Error parseando card: {e}")
 
     return resultados
 
@@ -243,34 +224,34 @@ def parsear_cards_dom(page, sector_nombre: str, tipo_nombre: str) -> list[dict]:
 # Scraping de una URL
 # ---------------------------------------------------------------------------
 
-def scrape_pagina(page, url: str, sector_nombre: str, tipo_nombre: str) -> list[dict]:
+def scrape_pagina(client: httpx.Client, url: str, sector_nombre: str, tipo_nombre: str) -> list[dict]:
     log.info(f"  Scrapeando: {url}")
     try:
-        page.goto(url, wait_until="networkidle", timeout=TIMEOUT_MS)
-    except PWTimeout:
-        log.warning(f"  Timeout cargando {url}")
+        resp = client.get(url, timeout=30, follow_redirects=True)
+        if resp.status_code != 200:
+            log.warning(f"  HTTP {resp.status_code} en {url}")
+            return []
+        html = resp.text
+    except Exception as e:
+        log.warning(f"  Error al cargar {url}: {e}")
         return []
 
-    # Intentar JSON primero (más confiable)
-    items_json = extraer_json_nextjs(page)
+    items_json = extraer_json_nextjs(html)
     if items_json:
         log.info(f"  JSON Next.js: {len(items_json)} items")
         resultados = [parsear_listing_json(i, sector_nombre, tipo_nombre) for i in items_json]
         return [r for r in resultados if r]
 
-    # Fallback: parsear DOM
-    return parsear_cards_dom(page, sector_nombre, tipo_nombre)
+    return parsear_cards_dom(html, sector_nombre, tipo_nombre)
 
 
-def hay_mas_paginas(page) -> bool:
-    """Detecta si hay un botón/link de siguiente página."""
-    siguiente = page.query_selector(
-        "a[rel='next'], "
-        "[data-qa='PAGINATION_NEXT'], "
-        ".pagination-next, "
-        "a[class*='next']"
+def hay_mas_paginas(html: str) -> bool:
+    soup = BeautifulSoup(html, "html.parser")
+    return bool(
+        soup.find("a", rel="next") or
+        soup.find(attrs={"data-qa": "PAGINATION_NEXT"}) or
+        soup.find("a", class_=re.compile("next", re.I))
     )
-    return siguiente is not None
 
 
 # ---------------------------------------------------------------------------
@@ -302,24 +283,9 @@ def main():
 
     total_guardados = 0
     combinaciones = [(t, s) for t in TIPOS for s in SECTORES]
-    log.info(f"Combinaciones a scrapesr: {len(combinaciones)} ({len(TIPOS)} tipos × {len(SECTORES)} sectores)")
+    log.info(f"Combinaciones: {len(combinaciones)} ({len(TIPOS)} tipos × {len(SECTORES)} sectores)")
 
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage"],
-        )
-        context = browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            ),
-            locale="es-EC",
-            extra_http_headers={"Accept-Language": "es-EC,es;q=0.9"},
-        )
-        page = context.new_page()
-
+    with httpx.Client(headers=HEADERS) as client:
         for tipo_slug, sector_key in combinaciones:
             tipo_nombre   = TIPOS[tipo_slug]
             sector_nombre = SECTORES[sector_key]
@@ -327,25 +293,28 @@ def main():
 
             for pagina in range(1, MAX_PAGINAS + 1):
                 url = build_url(tipo_slug, sector_key, pagina)
-                listings = scrape_pagina(page, url, sector_nombre, tipo_nombre)
+                listings = scrape_pagina(client, url, sector_nombre, tipo_nombre)
 
                 if not listings:
-                    log.info(f"  Página {pagina}: sin resultados, siguiente combinación")
+                    log.info(f"  Página {pagina}: sin resultados")
                     break
 
                 guardados = guardar_listings(supabase, listings)
                 total_guardados += guardados
                 log.info(f"  Página {pagina}: {len(listings)} encontrados, {guardados} guardados")
 
-                if pagina < MAX_PAGINAS and not hay_mas_paginas(page):
-                    log.info(f"  No hay más páginas")
-                    break
+                if pagina < MAX_PAGINAS:
+                    try:
+                        resp = client.get(url, timeout=30, follow_redirects=True)
+                        if not hay_mas_paginas(resp.text):
+                            log.info("  No hay más páginas")
+                            break
+                    except Exception:
+                        break
 
                 time.sleep(DELAY_SEGUNDOS)
 
-        browser.close()
-
-    log.info(f"\n=== Scraping completado: {total_guardados} listings guardados en total ===")
+    log.info(f"\n=== Scraping completado: {total_guardados} listings guardados ===")
 
 
 if __name__ == "__main__":
