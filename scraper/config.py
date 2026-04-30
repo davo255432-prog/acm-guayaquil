@@ -1,7 +1,8 @@
 import os
 
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+SUPABASE_URL    = os.environ["SUPABASE_URL"]
+SUPABASE_KEY    = os.environ["SUPABASE_KEY"]
+SCRAPERAPI_KEY  = os.environ["SCRAPERAPI_KEY"]
 
 BASE_URL = "https://www.plusvalia.com/venta"
 
@@ -29,7 +30,7 @@ TIPOS = {
     "locales-comerciales":"Local Comercial",
 }
 
-MAX_PAGINAS    = 5    # robots.txt permite hasta página 5
+MAX_PAGINAS    = 2    # 2 páginas por combinación para conservar créditos
 DELAY_SEGUNDOS = 3    # pausa entre requests (respetuoso con el servidor)
 TIMEOUT_MS     = 30_000
 

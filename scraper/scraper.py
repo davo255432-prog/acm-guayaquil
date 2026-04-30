@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 from supabase import create_client
 
 from config import (
-    SUPABASE_URL, SUPABASE_KEY,
+    SUPABASE_URL, SUPABASE_KEY, SCRAPERAPI_KEY,
     SECTORES, TIPOS,
     MAX_PAGINAS, DELAY_SEGUNDOS,
     build_url,
@@ -226,8 +226,10 @@ def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[d
 
 def scrape_pagina(client: httpx.Client, url: str, sector_nombre: str, tipo_nombre: str) -> list[dict]:
     log.info(f"  Scrapeando: {url}")
+    proxy_url = "https://api.scraperapi.com/"
+    params = {"api_key": SCRAPERAPI_KEY, "url": url, "render": "false"}
     try:
-        resp = client.get(url, timeout=30, follow_redirects=True)
+        resp = client.get(proxy_url, params=params, timeout=60)
         if resp.status_code != 200:
             log.warning(f"  HTTP {resp.status_code} en {url}")
             return []
