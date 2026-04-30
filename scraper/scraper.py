@@ -263,6 +263,11 @@ def hay_mas_paginas(html: str) -> bool:
 def guardar_listings(supabase_client, listings: list[dict]) -> int:
     if not listings:
         return 0
+    # Deduplicar por url_fuente antes de enviar
+    seen = {}
+    for l in listings:
+        seen[l["url_fuente"]] = l
+    listings = list(seen.values())
     try:
         result = supabase_client.table("listings").upsert(
             listings,
