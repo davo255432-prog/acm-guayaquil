@@ -1,0 +1,27 @@
+name: ACM Scraper Diario
+
+on:
+  schedule:
+    - cron: '0 16 * * *'  # 11 AM hora Ecuador (UTC-5)
+  workflow_dispatch:       # permite correrlo manualmente
+
+jobs:
+  scraper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r scraper/requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Correr scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scraper/scraper.py
