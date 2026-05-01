@@ -23,6 +23,7 @@
     .card-hover:hover { box-shadow: 0 8px 24px rgba(0,0,0,.1); transform: translateY(-2px); }
     #loader { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .seccion-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid #f3f4f6; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -41,69 +42,131 @@
   <!-- ── FORMULARIO DE BÚSQUEDA ── -->
   <main class="max-w-5xl mx-auto px-4 py-8">
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-      <h2 class="text-lg font-semibold text-gray-800 mb-4">Selecciona la propiedad a valorar</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <h2 class="text-lg font-semibold text-gray-800 mb-5">Selecciona la propiedad a valorar</h2>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Sector</label>
-          <select id="sector" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
-            <option value="">— Seleccionar sector —</option>
-            <option value="Samborondón">Samborondón</option>
-            <option value="La Puntilla">La Puntilla</option>
-            <option value="Norte de Guayaquil">Norte de Guayaquil</option>
-            <option value="Los Ceibos">Los Ceibos</option>
-            <option value="Centro de Guayaquil">Centro de Guayaquil</option>
-            <option value="Vía a la Costa">Vía a la Costa</option>
-            <option value="Av. León Febres Cordero">Av. León Febres Cordero</option>
-            <option value="Vía a Salitre">Vía a Salitre</option>
-            <option value="Narcisa de Jesús">Narcisa de Jesús</option>
-          </select>
+      <!-- BLOQUE 1: Ubicación -->
+      <div class="mb-5">
+        <p class="seccion-label">Ubicación</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Sector</label>
+            <select id="sector" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— Seleccionar sector —</option>
+              <option value="Samborondón">Samborondón</option>
+              <option value="La Puntilla">La Puntilla</option>
+              <option value="Norte de Guayaquil">Norte de Guayaquil</option>
+              <option value="Los Ceibos">Los Ceibos</option>
+              <option value="Centro de Guayaquil">Centro de Guayaquil</option>
+              <option value="Vía a la Costa">Vía a la Costa</option>
+              <option value="Av. León Febres Cordero">Av. León Febres Cordero</option>
+              <option value="Vía a Salitre">Vía a Salitre</option>
+              <option value="Narcisa de Jesús">Narcisa de Jesús</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de inmueble</label>
+            <select id="tipo" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— Seleccionar tipo —</option>
+              <option value="Casa">Casa</option>
+              <option value="Departamento">Departamento</option>
+              <option value="Oficina">Oficina</option>
+              <option value="Consultorio">Consultorio</option>
+              <option value="Terreno">Terreno</option>
+              <option value="Local Comercial">Local Comercial</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Urbanización / Ciudadela
+              <span class="text-gray-400 font-normal">opcional — ej. La Joya, Villa Club, Terrasol</span>
+            </label>
+            <input id="urbanizacion" type="text" placeholder="Escribe el nombre de la urbanización..."
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+          </div>
         </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de inmueble</label>
-          <select id="tipo" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
-            <option value="">— Seleccionar tipo —</option>
-            <option value="Casa">Casa</option>
-            <option value="Departamento">Departamento</option>
-            <option value="Oficina">Oficina</option>
-            <option value="Consultorio">Consultorio</option>
-            <option value="Terreno">Terreno</option>
-            <option value="Local Comercial">Local Comercial</option>
-          </select>
-        </div>
-
-        <div class="sm:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Urbanización / Ciudadela
-            <span class="text-gray-400 font-normal">opcional — ej. La Joya, Villa Club, Terrasol</span>
-          </label>
-          <input id="urbanizacion" type="text" placeholder="Escribe el nombre de la urbanización..."
-            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-        </div>
-
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Área del inmueble (m²) <span class="text-gray-400 font-normal">opcional</span></label>
-          <input id="area" type="number" min="1" placeholder="ej. 120"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+      <!-- BLOQUE 2: Características -->
+      <div class="mb-5">
+        <p class="seccion-label">Características del inmueble</p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Habitaciones</label>
+            <select id="habitaciones" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— Cualquiera —</option>
+              <option value="1">1 habitación</option>
+              <option value="2">2 habitaciones</option>
+              <option value="3">3 habitaciones</option>
+              <option value="4">4+ habitaciones</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Baños</label>
+            <select id="banos" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— Cualquiera —</option>
+              <option value="1">1 baño</option>
+              <option value="2">2 baños</option>
+              <option value="3">3+ baños</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Garaje / Parqueos</label>
+            <select id="parqueos" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— Cualquiera —</option>
+              <option value="0">Sin garaje</option>
+              <option value="1">1 parqueo</option>
+              <option value="2">2+ parqueos</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Pisos <span class="text-gray-400 font-normal">referencial</span></label>
+            <select id="pisos" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— No especificar —</option>
+              <option value="1">1 piso</option>
+              <option value="2">2 pisos</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Acabados <span class="text-gray-400 font-normal">referencial</span></label>
+            <select id="acabados" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— No especificar —</option>
+              <option value="estandar">Estándar</option>
+              <option value="moderno">Moderno / Contemporáneo</option>
+              <option value="lujo">De lujo</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Precio mínimo (USD) <span class="text-gray-400 font-normal">opcional</span></label>
-          <input id="precio-min" type="number" min="0" placeholder="ej. 80000"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Precio máximo (USD) <span class="text-gray-400 font-normal">opcional</span></label>
-          <input id="precio-max" type="number" min="0" placeholder="ej. 200000"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+      </div>
+
+      <!-- BLOQUE 3: Metraje y precio -->
+      <div class="mb-5">
+        <p class="seccion-label">Metraje y precio</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Metraje total (m²) <span class="text-gray-400 font-normal">opcional</span></label>
+            <input id="area-total" type="number" min="1" placeholder="ej. 200"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Metraje de construcción (m²) <span class="text-gray-400 font-normal">opcional</span></label>
+            <input id="area-construccion" type="number" min="1" placeholder="ej. 150"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio mínimo (USD) <span class="text-gray-400 font-normal">opcional</span></label>
+            <input id="precio-min" type="number" min="0" placeholder="ej. 80000"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio máximo (USD) <span class="text-gray-400 font-normal">opcional</span></label>
+            <input id="precio-max" type="number" min="0" placeholder="ej. 200000"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+          </div>
         </div>
       </div>
 
       <button id="btn-buscar"
-        class="mt-5 w-full sm:w-auto bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-lg transition-colors text-sm">
+        class="w-full sm:w-auto bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-lg transition-colors text-sm">
         Analizar mercado
       </button>
     </div>
@@ -125,11 +188,17 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="stats-grid"></div>
       </div>
 
-      <!-- Estimación de valor (si ingresó m²) -->
+      <!-- Estimación de valor -->
       <div id="estimacion-wrap" class="hidden bg-brand-light border border-brand rounded-2xl p-5 mb-6">
         <p class="text-sm text-brand font-medium mb-1">Valor estimado de tu inmueble</p>
         <p id="estimacion-valor" class="text-3xl font-bold text-brand-dark"></p>
         <p id="estimacion-detalle" class="text-xs text-gray-500 mt-1"></p>
+      </div>
+
+      <!-- Ficha referencial (pisos + acabados) -->
+      <div id="ficha-wrap" class="hidden bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-6 text-sm text-gray-600">
+        <p class="font-medium text-gray-700 mb-2">Ficha de la propiedad ingresada</p>
+        <div id="ficha-contenido" class="flex flex-wrap gap-4"></div>
       </div>
 
       <!-- Lista de comparables -->
@@ -140,7 +209,7 @@
         </div>
         <div id="lista-comparables" class="space-y-3"></div>
         <p id="sin-resultados" class="hidden text-center text-gray-400 py-10 text-sm">
-          No se encontraron propiedades con esos filtros. Intenta ampliar el rango de precios.
+          No se encontraron propiedades con esos filtros. Intenta ampliar los criterios de búsqueda.
         </p>
       </div>
 
@@ -161,25 +230,32 @@
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 
-    // ── CONFIGURAR CON TUS CREDENCIALES DE SUPABASE ──────────────────────────
     const SUPABASE_URL  = 'https://cnpoevkxflrwkzbjmurr.supabase.co'
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNucG9ldmt4Zmxyd2t6YmptdXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MzE1OTIsImV4cCI6MjA5MzAwNzU5Mn0.W1q8sYvHsWJ47-PsR6IsqB5oyV-zDHd7LYS40sgmR6Q'
-    // ─────────────────────────────────────────────────────────────────────────
 
     const db = createClient(SUPABASE_URL, SUPABASE_ANON)
 
-    const fmt = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-    const fmtM2 = (v) => `${new Intl.NumberFormat('es-EC', { maximumFractionDigits: 0 }).format(v)} USD/m²`
+    const fmt   = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+    const fmtN  = (v) => new Intl.NumberFormat('es-EC', { maximumFractionDigits: 0 }).format(v)
+    const fmtM2 = (v) => `${fmtN(v)} USD/m²`
+
+    const ACABADOS_LABEL = { estandar: 'Estándar', moderno: 'Moderno / Contemporáneo', lujo: 'De lujo' }
 
     document.getElementById('btn-buscar').addEventListener('click', buscar)
 
     async function buscar() {
-      const sector        = document.getElementById('sector').value
-      const tipo          = document.getElementById('tipo').value
-      const urbanizacion  = document.getElementById('urbanizacion').value.trim()
-      const area          = parseFloat(document.getElementById('area').value) || null
-      const preMin        = parseFloat(document.getElementById('precio-min').value) || null
-      const preMax        = parseFloat(document.getElementById('precio-max').value) || null
+      const sector       = document.getElementById('sector').value
+      const tipo         = document.getElementById('tipo').value
+      const urbanizacion = document.getElementById('urbanizacion').value.trim()
+      const habitaciones = parseInt(document.getElementById('habitaciones').value) || null
+      const banos        = parseInt(document.getElementById('banos').value) || null
+      const parqueos     = document.getElementById('parqueos').value
+      const pisos        = document.getElementById('pisos').value
+      const acabados     = document.getElementById('acabados').value
+      const areaTotal    = parseFloat(document.getElementById('area-total').value) || null
+      const areaCons     = parseFloat(document.getElementById('area-construccion').value) || null
+      const preMin       = parseFloat(document.getElementById('precio-min').value) || null
+      const preMax       = parseFloat(document.getElementById('precio-max').value) || null
 
       if (!sector || !tipo) {
         alert('Selecciona sector y tipo de inmueble.')
@@ -190,18 +266,28 @@
       ocultarResultados()
 
       try {
-        const baseQuery = () => db
-          .from('listings')
-          .select('*')
-          .eq('sector', sector)
-          .eq('tipo', tipo)
-          .eq('activo', true)
-          .order('fecha_scrape', { ascending: false })
-          .limit(200)
-
-        const aplicarFiltrosPrecio = (q) => {
+        const baseQuery = () => {
+          let q = db
+            .from('listings')
+            .select('*')
+            .eq('sector', sector)
+            .eq('tipo', tipo)
+            .eq('activo', true)
+            .order('fecha_scrape', { ascending: false })
+            .limit(200)
           if (preMin) q = q.gte('precio', preMin)
           if (preMax) q = q.lte('precio', preMax)
+          if (habitaciones) {
+            if (habitaciones >= 4) q = q.gte('habitaciones', 4)
+            else q = q.eq('habitaciones', habitaciones)
+          }
+          if (banos) {
+            if (banos >= 3) q = q.gte('banos', 3)
+            else q = q.eq('banos', banos)
+          }
+          if (parqueos === '0') q = q.eq('parqueos', 0)
+          else if (parqueos === '1') q = q.eq('parqueos', 1)
+          else if (parqueos === '2') q = q.gte('parqueos', 2)
           return q
         }
 
@@ -209,16 +295,14 @@
         let origenLabel = null
 
         if (urbanizacion) {
-          const { data: dataUrb, error: errUrb } = await aplicarFiltrosPrecio(
-            baseQuery().ilike('titulo', `%${urbanizacion}%`)
-          )
+          const { data: dataUrb, error: errUrb } = await baseQuery().ilike('titulo', `%${urbanizacion}%`)
           if (errUrb) throw errUrb
 
           if (dataUrb && dataUrb.length >= 5) {
             data = dataUrb
             origenLabel = { texto: `${dataUrb.length} en ${urbanizacion}`, tipo: 'urb' }
           } else {
-            const { data: dataSector, error: errSector } = await aplicarFiltrosPrecio(baseQuery())
+            const { data: dataSector, error: errSector } = await baseQuery()
             if (errSector) throw errSector
             data = dataSector || []
             const enUrb = dataUrb ? dataUrb.length : 0
@@ -230,13 +314,13 @@
             }
           }
         } else {
-          const { data: dataSector, error } = await aplicarFiltrosPrecio(baseQuery())
+          const { data: dataSector, error } = await baseQuery()
           if (error) throw error
           data = dataSector || []
         }
 
         mostrarLoader(false)
-        renderResultados(data, sector, tipo, area, origenLabel)
+        renderResultados(data, sector, tipo, { areaTotal, areaCons, pisos, acabados }, origenLabel)
       } catch (err) {
         mostrarLoader(false)
         document.getElementById('error-wrap').classList.remove('hidden')
@@ -244,17 +328,16 @@
       }
     }
 
-    function renderResultados(listings, sector, tipo, areaIngresada, origenLabel) {
-      const wrap = document.getElementById('resultados')
-      wrap.classList.remove('hidden')
+    function renderResultados(listings, sector, tipo, ficha, origenLabel) {
+      document.getElementById('resultados').classList.remove('hidden')
 
-      // ── Estadísticas ──────────────────────────────────────────────
       const conPrecio = listings.filter(l => l.precio > 0)
       const conM2     = listings.filter(l => l.precio_m2 > 0)
 
       document.getElementById('titulo-resultados').textContent =
         `${tipo}s en ${sector} — ${conPrecio.length} comparables encontrados`
 
+      // Badge de origen
       const badge = document.getElementById('badge-origen')
       if (origenLabel) {
         badge.textContent = origenLabel.texto
@@ -266,39 +349,54 @@
         badge.classList.add('hidden')
       }
 
+      // Estadísticas
       const avg   = promedio(conPrecio.map(l => l.precio))
       const mn    = Math.min(...conPrecio.map(l => l.precio))
       const mx    = Math.max(...conPrecio.map(l => l.precio))
       const avgM2 = promedio(conM2.map(l => l.precio_m2))
 
-      const stats = [
-        { label: 'Precio promedio',    valor: avg   ? fmt.format(avg)   : '—' },
-        { label: 'Precio mínimo',      valor: conPrecio.length ? fmt.format(mn) : '—' },
-        { label: 'Precio máximo',      valor: conPrecio.length ? fmt.format(mx) : '—' },
-        { label: 'Promedio USD/m²',    valor: avgM2 ? fmtM2(avgM2) : '—' },
-      ]
-
-      document.getElementById('stats-grid').innerHTML = stats.map(s => `
+      document.getElementById('stats-grid').innerHTML = [
+        { label: 'Precio promedio',  valor: avg   ? fmt.format(avg) : '—' },
+        { label: 'Precio mínimo',    valor: conPrecio.length ? fmt.format(mn) : '—' },
+        { label: 'Precio máximo',    valor: conPrecio.length ? fmt.format(mx) : '—' },
+        { label: 'Promedio USD/m²',  valor: avgM2 ? fmtM2(avgM2) : '—' },
+      ].map(s => `
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
           <p class="text-xs text-gray-500 mb-1">${s.label}</p>
           <p class="text-xl font-bold text-gray-800">${s.valor}</p>
         </div>
       `).join('')
 
-      // ── Estimación de valor ───────────────────────────────────────
+      // Estimación de valor
       const estWrap = document.getElementById('estimacion-wrap')
-      if (areaIngresada && avgM2) {
-        const estimado = areaIngresada * avgM2
+      const areaParaEstimar = ficha.areaCons || ficha.areaTotal
+      if (areaParaEstimar && avgM2) {
+        const estimado = areaParaEstimar * avgM2
+        const tipoArea = ficha.areaCons ? 'construcción' : 'total'
         document.getElementById('estimacion-valor').textContent = fmt.format(estimado)
         document.getElementById('estimacion-detalle').textContent =
-          `${areaIngresada} m² × ${fmtM2(avgM2)} (precio promedio del sector)`
+          `${fmtN(areaParaEstimar)} m² de ${tipoArea} × ${fmtM2(avgM2)} (promedio del sector)`
         estWrap.classList.remove('hidden')
       } else {
         estWrap.classList.add('hidden')
       }
 
-      // ── Lista de comparables ──────────────────────────────────────
-      const lista = document.getElementById('lista-comparables')
+      // Ficha referencial (pisos y acabados)
+      const fichaWrap = document.getElementById('ficha-wrap')
+      const fichaItems = []
+      if (ficha.areaTotal)  fichaItems.push(`<span><strong>Total:</strong> ${fmtN(ficha.areaTotal)} m²</span>`)
+      if (ficha.areaCons)   fichaItems.push(`<span><strong>Construcción:</strong> ${fmtN(ficha.areaCons)} m²</span>`)
+      if (ficha.pisos)      fichaItems.push(`<span><strong>Pisos:</strong> ${ficha.pisos}</span>`)
+      if (ficha.acabados)   fichaItems.push(`<span><strong>Acabados:</strong> ${ACABADOS_LABEL[ficha.acabados]}</span>`)
+      if (fichaItems.length) {
+        document.getElementById('ficha-contenido').innerHTML = fichaItems.join('')
+        fichaWrap.classList.remove('hidden')
+      } else {
+        fichaWrap.classList.add('hidden')
+      }
+
+      // Lista de comparables
+      const lista  = document.getElementById('lista-comparables')
       const sinRes = document.getElementById('sin-resultados')
 
       if (listings.length === 0) {
@@ -317,12 +415,13 @@
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-gray-800 text-sm truncate">${l.titulo || tipo + ' en ' + sector}</p>
             <p class="text-xs text-gray-500 mt-0.5 truncate">${l.direccion || sector}</p>
-            <div class="flex flex-wrap gap-3 mt-2 text-xs text-gray-600">
+            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 items-center">
               ${l.precio    ? `<span class="font-bold text-brand text-sm">${fmt.format(l.precio)}</span>` : ''}
-              ${l.area_m2   ? `<span>${l.area_m2} m²</span>` : ''}
-              ${l.precio_m2 ? `<span>${fmtM2(l.precio_m2)}</span>` : ''}
-              ${l.habitaciones ? `<span>${l.habitaciones} dorm.</span>` : ''}
-              ${l.banos        ? `<span>${l.banos} baños</span>` : ''}
+              ${l.area_m2   ? `<span>${fmtN(l.area_m2)} m²</span>` : ''}
+              ${l.precio_m2 ? `<span class="text-gray-400">${fmtM2(l.precio_m2)}</span>` : ''}
+              ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
+              ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
+              ${l.parqueos     ? `<span>🚗 ${l.parqueos}</span>` : ''}
             </div>
           </div>
           <div class="flex-shrink-0 text-blue-400 self-center">
