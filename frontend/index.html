@@ -73,6 +73,15 @@
           </select>
         </div>
 
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Urbanización / Ciudadela
+            <span class="text-gray-400 font-normal">opcional — ej. La Joya, Villa Club, Terrasol</span>
+          </label>
+          <input id="urbanizacion" type="text" placeholder="Escribe el nombre de la urbanización..."
+            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+        </div>
+
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
@@ -125,7 +134,10 @@
 
       <!-- Lista de comparables -->
       <div>
-        <h3 class="text-base font-semibold text-gray-700 mb-3">Propiedades comparables</h3>
+        <div class="flex items-center gap-3 mb-3">
+          <h3 class="text-base font-semibold text-gray-700">Propiedades comparables</h3>
+          <span id="badge-origen" class="hidden text-xs px-2.5 py-1 rounded-full font-medium"></span>
+        </div>
         <div id="lista-comparables" class="space-y-3"></div>
         <p id="sin-resultados" class="hidden text-center text-gray-400 py-10 text-sm">
           No se encontraron propiedades con esos filtros. Intenta ampliar el rango de precios.
@@ -162,11 +174,12 @@
     document.getElementById('btn-buscar').addEventListener('click', buscar)
 
     async function buscar() {
-      const sector   = document.getElementById('sector').value
-      const tipo     = document.getElementById('tipo').value
-      const area     = parseFloat(document.getElementById('area').value) || null
-      const preMin   = parseFloat(document.getElementById('precio-min').value) || null
-      const preMax   = parseFloat(document.getElementById('precio-max').value) || null
+      const sector        = document.getElementById('sector').value
+      const tipo          = document.getElementById('tipo').value
+      const urbanizacion  = document.getElementById('urbanizacion').value.trim()
+      const area          = parseFloat(document.getElementById('area').value) || null
+      const preMin        = parseFloat(document.getElementById('precio-min').value) || null
+      const preMax        = parseFloat(document.getElementById('precio-max').value) || null
 
       if (!sector || !tipo) {
         alert('Selecciona sector y tipo de inmueble.')
@@ -177,7 +190,7 @@
       ocultarResultados()
 
       try {
-        let query = db
+        const baseQuery = () => db
           .from('listings')
           .select('*')
           .eq('sector', sector)
@@ -186,14 +199,44 @@
           .order('fecha_scrape', { ascending: false })
           .limit(200)
 
-        if (preMin) query = query.gte('precio', preMin)
-        if (preMax) query = query.lte('precio', preMax)
+        const aplicarFiltrosPrecio = (q) => {
+          if (preMin) q = q.gte('precio', preMin)
+          if (preMax) q = q.lte('precio', preMax)
+          return q
+        }
 
-        const { data, error } = await query
-        if (error) throw error
+        let data = []
+        let origenLabel = null
+
+        if (urbanizacion) {
+          const { data: dataUrb, error: errUrb } = await aplicarFiltrosPrecio(
+            baseQuery().ilike('titulo', `%${urbanizacion}%`)
+          )
+          if (errUrb) throw errUrb
+
+          if (dataUrb && dataUrb.length >= 5) {
+            data = dataUrb
+            origenLabel = { texto: `${dataUrb.length} en ${urbanizacion}`, tipo: 'urb' }
+          } else {
+            const { data: dataSector, error: errSector } = await aplicarFiltrosPrecio(baseQuery())
+            if (errSector) throw errSector
+            data = dataSector || []
+            const enUrb = dataUrb ? dataUrb.length : 0
+            origenLabel = {
+              texto: enUrb > 0
+                ? `${enUrb} en ${urbanizacion} · ${data.length} del sector completo`
+                : `Sin resultados en ${urbanizacion} · mostrando ${data.length} del sector`,
+              tipo: 'fallback'
+            }
+          }
+        } else {
+          const { data: dataSector, error } = await aplicarFiltrosPrecio(baseQuery())
+          if (error) throw error
+          data = dataSector || []
+        }
 
         mostrarLoader(false)
-        renderResultados(data || [], sector, tipo, area)
+        renderResultados(data, sector, tipo, area, origenLabel)
       } catch (err) {
         mostrarLoader(false)
         document.getElementById('error-wrap').classList.remove('hidden')
@@ -201,7 +244,7 @@
       }
     }
 
-    function renderResultados(listings, sector, tipo, areaIngresada) {
+    function renderResultados(listings, sector, tipo, areaIngresada, origenLabel) {
       const wrap = document.getElementById('resultados')
       wrap.classList.remove('hidden')
 
@@ -211,6 +254,17 @@
 
       document.getElementById('titulo-resultados').textContent =
         `${tipo}s en ${sector} — ${conPrecio.length} comparables encontrados`
+
+      const badge = document.getElementById('badge-origen')
+      if (origenLabel) {
+        badge.textContent = origenLabel.texto
+        badge.className = origenLabel.tipo === 'urb'
+          ? 'text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700'
+          : 'text-xs px-2.5 py-1 rounded-full font-medium bg-yellow-100 text-yellow-700'
+        badge.classList.remove('hidden')
+      } else {
+        badge.classList.add('hidden')
+      }
 
       const avg   = promedio(conPrecio.map(l => l.precio))
       const mn    = Math.min(...conPrecio.map(l => l.precio))
