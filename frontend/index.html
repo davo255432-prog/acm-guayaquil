@@ -3,32 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ACM — Análisis Comparativo de Mercado | Guayaquil</title>
+  <title>ACM — Avalúo Comercial | Guayaquil</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: { DEFAULT: '#1a56db', dark: '#1e429f', light: '#ebf3fe' }
-          }
-        }
-      }
+      theme: { extend: { colors: { brand: { DEFAULT: '#1a56db', dark: '#1e429f', light: '#ebf3fe' } } } }
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     body { font-family: 'Inter', sans-serif; }
     .card-hover { transition: box-shadow .2s, transform .2s; }
     .card-hover:hover { box-shadow: 0 8px 24px rgba(0,0,0,.1); transform: translateY(-2px); }
     #loader { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .seccion-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid #f3f4f6; }
+    .seccion-label { font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#6b7280; margin-bottom:.75rem; padding-bottom:.4rem; border-bottom:1px solid #f3f4f6; }
+    #report { display: none; }
+    @media print {
+      #app, #modal-informe { display: none !important; }
+      #report { display: block !important; }
+      .rpt-page { page-break-after: always; position: relative; width: 210mm; min-height: 297mm; box-sizing: border-box; background: white; margin: 0; }
+      .rpt-page:last-child { page-break-after: avoid; }
+      @page { size: A4; margin: 0; }
+    }
+    @media screen {
+      .rpt-page { width: 210mm; min-height: 297mm; box-sizing: border-box; background: white; position: relative; margin: 0 auto 8px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-  <!-- ── HEADER ── -->
+<!-- ══ APP ══ -->
+<div id="app">
   <header class="bg-brand shadow">
     <div class="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
       <div>
@@ -39,12 +45,10 @@
     </div>
   </header>
 
-  <!-- ── FORMULARIO DE BÚSQUEDA ── -->
   <main class="max-w-5xl mx-auto px-4 py-8">
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
       <h2 class="text-lg font-semibold text-gray-800 mb-5">Selecciona la propiedad a valorar</h2>
 
-      <!-- BLOQUE 1: Ubicación -->
       <div class="mb-5">
         <p class="seccion-label">Ubicación</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -52,41 +56,27 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Sector</label>
             <select id="sector" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">— Seleccionar sector —</option>
-              <option value="Samborondón">Samborondón</option>
-              <option value="La Puntilla">La Puntilla</option>
-              <option value="Norte de Guayaquil">Norte de Guayaquil</option>
-              <option value="Los Ceibos">Los Ceibos</option>
-              <option value="Centro de Guayaquil">Centro de Guayaquil</option>
-              <option value="Vía a la Costa">Vía a la Costa</option>
-              <option value="Av. León Febres Cordero">Av. León Febres Cordero</option>
-              <option value="Vía a Salitre">Vía a Salitre</option>
-              <option value="Narcisa de Jesús">Narcisa de Jesús</option>
+              <option>Samborondón</option><option>La Puntilla</option><option>Norte de Guayaquil</option>
+              <option>Los Ceibos</option><option>Centro de Guayaquil</option><option>Vía a la Costa</option>
+              <option>Av. León Febres Cordero</option><option>Vía a Salitre</option><option>Narcisa de Jesús</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de inmueble</label>
             <select id="tipo" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">— Seleccionar tipo —</option>
-              <option value="Casa">Casa</option>
-              <option value="Departamento">Departamento</option>
-              <option value="Oficina">Oficina</option>
-              <option value="Consultorio">Consultorio</option>
-              <option value="Terreno">Terreno</option>
-              <option value="Local Comercial">Local Comercial</option>
+              <option>Casa</option><option>Departamento</option><option>Oficina</option>
+              <option>Consultorio</option><option>Terreno</option><option>Local Comercial</option>
             </select>
           </div>
           <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Urbanización / Ciudadela
-              <span class="text-gray-400 font-normal">opcional — ej. La Joya, Villa Club, Terrasol</span>
-            </label>
-            <input id="urbanizacion" type="text" placeholder="Escribe el nombre de la urbanización..."
+            <label class="block text-sm font-medium text-gray-700 mb-1">Urbanización / Ciudadela <span class="text-gray-400 font-normal">opcional</span></label>
+            <input id="urbanizacion" type="text" placeholder="ej. La Joya, Villa Club, Terrasol..."
               class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
           </div>
         </div>
       </div>
 
-      <!-- BLOQUE 2: Características -->
       <div class="mb-5">
         <p class="seccion-label">Características del inmueble</p>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -94,51 +84,40 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Habitaciones</label>
             <select id="habitaciones" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">— Cualquiera —</option>
-              <option value="1">1 habitación</option>
-              <option value="2">2 habitaciones</option>
-              <option value="3">3 habitaciones</option>
-              <option value="4">4+ habitaciones</option>
+              <option value="1">1 habitación</option><option value="2">2 habitaciones</option>
+              <option value="3">3 habitaciones</option><option value="4">4+ habitaciones</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Baños</label>
             <select id="banos" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">— Cualquiera —</option>
-              <option value="1">1 baño</option>
-              <option value="2">2 baños</option>
-              <option value="3">3+ baños</option>
+              <option value="1">1 baño</option><option value="2">2 baños</option><option value="3">3+ baños</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Garaje / Parqueos</label>
             <select id="parqueos" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">— Cualquiera —</option>
-              <option value="0">Sin garaje</option>
-              <option value="1">1 parqueo</option>
-              <option value="2">2+ parqueos</option>
+              <option value="0">Sin garaje</option><option value="1">1 parqueo</option><option value="2">2+ parqueos</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Pisos <span class="text-gray-400 font-normal">referencial</span></label>
             <select id="pisos" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
-              <option value="">— No especificar —</option>
-              <option value="1">1 piso</option>
-              <option value="2">2 pisos</option>
+              <option value="">— No especificar —</option><option value="1">1 piso</option><option value="2">2 pisos</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Acabados <span class="text-gray-400 font-normal">referencial</span></label>
             <select id="acabados" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">— No especificar —</option>
-              <option value="estandar">Estándar</option>
-              <option value="moderno">Moderno / Contemporáneo</option>
-              <option value="lujo">De lujo</option>
+              <option value="estandar">Estándar</option><option value="moderno">Moderno / Contemporáneo</option><option value="lujo">De lujo</option>
             </select>
           </div>
         </div>
       </div>
 
-      <!-- BLOQUE 3: Metraje y precio -->
       <div class="mb-5">
         <p class="seccion-label">Metraje y precio</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -165,13 +144,11 @@
         </div>
       </div>
 
-      <button id="btn-buscar"
-        class="w-full sm:w-auto bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-lg transition-colors text-sm">
+      <button id="btn-buscar" class="w-full sm:w-auto bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-lg transition-colors text-sm">
         Analizar mercado
       </button>
     </div>
 
-    <!-- ── LOADER ── -->
     <div id="loader-wrap" class="hidden flex justify-center py-12">
       <svg id="loader" class="w-10 h-10 text-brand" viewBox="0 0 24 24" fill="none">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -179,274 +156,537 @@
       </svg>
     </div>
 
-    <!-- ── RESULTADOS ACM ── -->
     <div id="resultados" class="hidden">
-
-      <!-- Resumen estadístico -->
       <div class="mb-6">
         <h2 class="text-lg font-semibold text-gray-800 mb-3" id="titulo-resultados"></h2>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="stats-grid"></div>
       </div>
-
-      <!-- Estimación de valor -->
       <div id="estimacion-wrap" class="hidden bg-brand-light border border-brand rounded-2xl p-5 mb-6">
         <p class="text-sm text-brand font-medium mb-1">Valor estimado de tu inmueble</p>
         <p id="estimacion-valor" class="text-3xl font-bold text-brand-dark"></p>
         <p id="estimacion-detalle" class="text-xs text-gray-500 mt-1"></p>
       </div>
-
-      <!-- Ficha referencial (pisos + acabados) -->
       <div id="ficha-wrap" class="hidden bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-6 text-sm text-gray-600">
         <p class="font-medium text-gray-700 mb-2">Ficha de la propiedad ingresada</p>
         <div id="ficha-contenido" class="flex flex-wrap gap-4"></div>
       </div>
-
-      <!-- Lista de comparables -->
       <div>
         <div class="flex items-center gap-3 mb-3">
           <h3 class="text-base font-semibold text-gray-700">Propiedades comparables</h3>
           <span id="badge-origen" class="hidden text-xs px-2.5 py-1 rounded-full font-medium"></span>
         </div>
         <div id="lista-comparables" class="space-y-3"></div>
-        <p id="sin-resultados" class="hidden text-center text-gray-400 py-10 text-sm">
-          No se encontraron propiedades con esos filtros. Intenta ampliar los criterios de búsqueda.
-        </p>
+        <p id="sin-resultados" class="hidden text-center text-gray-400 py-10 text-sm">No se encontraron propiedades con esos filtros.</p>
       </div>
 
+      <div id="btn-informe-wrap" class="hidden mt-8 p-6 rounded-2xl text-white" style="background:linear-gradient(135deg,#1e3a5f,#2d5a8e)">
+        <p class="font-bold text-lg mb-1">Generar Avalúo Comercial Profesional</p>
+        <p class="text-blue-200 text-sm mb-4">PDF completo listo para entregar al cliente — con fichas, análisis técnico y firma del agente.</p>
+        <button id="btn-generar-informe" class="font-semibold px-6 py-3 rounded-lg text-sm transition-colors text-white" style="background:#c9a84c">
+          Generar Avalúo PDF
+        </button>
+      </div>
     </div>
 
-    <!-- ── ERROR ── -->
     <div id="error-wrap" class="hidden bg-red-50 border border-red-200 rounded-2xl p-5 text-sm text-red-700">
-      <strong>Error al cargar los datos.</strong> Verifica tu conexión o contacta al administrador.
+      <strong>Error al cargar los datos.</strong> Verifica tu conexión.
     </div>
-
   </main>
 
   <footer class="text-center text-xs text-gray-400 py-8">
     Datos actualizados diariamente desde Plusvalía.com · ACM Guayaquil
   </footer>
+</div>
 
-  <!-- ── LÓGICA ── -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+<!-- ══ MODAL ══ -->
+<div id="modal-informe" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-1">Datos del Avalúo Comercial</h3>
+    <p class="text-sm text-gray-500 mb-5">Completa la información para generar el informe profesional.</p>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del cliente</label>
+        <input id="cliente-nombre" type="text" placeholder="ej. Juan Pérez"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Correo del cliente</label>
+        <input id="cliente-email" type="email" placeholder="ej. juan@gmail.com"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Dirección del inmueble valorado</label>
+        <input id="inmueble-direccion" type="text" placeholder="ej. Urb. La Joya, Mz. 5 Villa 12"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones técnicas <span class="text-gray-400 font-normal">opcional</span></label>
+        <textarea id="agente-notas" rows="3" placeholder="Notas adicionales sobre el inmueble..."
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"></textarea>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button id="btn-descargar-pdf" class="flex-1 text-white font-semibold px-4 py-3 rounded-lg text-sm transition-colors" style="background:#1e3a5f">
+        Descargar PDF
+      </button>
+      <button id="btn-enviar-email" class="flex-1 text-white font-semibold px-4 py-3 rounded-lg text-sm transition-colors" style="background:#c9a84c">
+        Enviar por correo
+      </button>
+      <button id="btn-modal-cerrar" class="px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
 
-    const SUPABASE_URL  = 'https://cnpoevkxflrwkzbjmurr.supabase.co'
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNucG9ldmt4Zmxyd2t6YmptdXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MzE1OTIsImV4cCI6MjA5MzAwNzU5Mn0.W1q8sYvHsWJ47-PsR6IsqB5oyV-zDHd7LYS40sgmR6Q'
+<!-- ══ REPORT (print) ══ -->
+<div id="report"></div>
 
-    const db = createClient(SUPABASE_URL, SUPABASE_ANON)
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 
-    const fmt   = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-    const fmtN  = (v) => new Intl.NumberFormat('es-EC', { maximumFractionDigits: 0 }).format(v)
-    const fmtM2 = (v) => `${fmtN(v)} USD/m²`
+  const SUPABASE_URL  = 'https://cnpoevkxflrwkzbjmurr.supabase.co'
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNucG9ldmt4Zmxyd2t6YmptdXJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MzE1OTIsImV4cCI6MjA5MzAwNzU5Mn0.W1q8sYvHsWJ47-PsR6IsqB5oyV-zDHd7LYS40sgmR6Q'
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON)
 
-    const ACABADOS_LABEL = { estandar: 'Estándar', moderno: 'Moderno / Contemporáneo', lujo: 'De lujo' }
+  const AGENTE = {
+    nombre:   'Janeth Bueno Hidalgo',
+    titulo:   'Corredora Inmobiliaria · ACBIR',
+    telefono: '+593 997 122 076',
+    email:    'janeth.bueno@gmail.com',
+  }
+  const ACABADOS = { estandar: 'Estándar', moderno: 'Moderno / Contemporáneo', lujo: 'De lujo' }
+  const fmt   = new Intl.NumberFormat('es-EC', { style:'currency', currency:'USD', maximumFractionDigits:0 })
+  const fmtN  = v => new Intl.NumberFormat('es-EC', { maximumFractionDigits:0 }).format(v)
+  const fmtM2 = v => `${fmtN(v)} USD/m²`
 
-    document.getElementById('btn-buscar').addEventListener('click', buscar)
+  let _listings = [], _ficha = {}, _stats = {}, _sector = '', _tipo = '', _urb = ''
 
-    async function buscar() {
-      const sector       = document.getElementById('sector').value
-      const tipo         = document.getElementById('tipo').value
-      const urbanizacion = document.getElementById('urbanizacion').value.trim()
-      const habitaciones = parseInt(document.getElementById('habitaciones').value) || null
-      const banos        = parseInt(document.getElementById('banos').value) || null
-      const parqueos     = document.getElementById('parqueos').value
-      const pisos        = document.getElementById('pisos').value
-      const acabados     = document.getElementById('acabados').value
-      const areaTotal    = parseFloat(document.getElementById('area-total').value) || null
-      const areaCons     = parseFloat(document.getElementById('area-construccion').value) || null
-      const preMin       = parseFloat(document.getElementById('precio-min').value) || null
-      const preMax       = parseFloat(document.getElementById('precio-max').value) || null
+  // ── Búsqueda ──
+  document.getElementById('btn-buscar').addEventListener('click', buscar)
 
-      if (!sector || !tipo) {
-        alert('Selecciona sector y tipo de inmueble.')
-        return
+  async function buscar() {
+    const sector       = document.getElementById('sector').value
+    const tipo         = document.getElementById('tipo').value
+    const urbanizacion = document.getElementById('urbanizacion').value.trim()
+    const habitaciones = parseInt(document.getElementById('habitaciones').value) || null
+    const banos        = parseInt(document.getElementById('banos').value) || null
+    const parqueos     = document.getElementById('parqueos').value
+    const pisos        = document.getElementById('pisos').value
+    const acabados     = document.getElementById('acabados').value
+    const areaTotal    = parseFloat(document.getElementById('area-total').value) || null
+    const areaCons     = parseFloat(document.getElementById('area-construccion').value) || null
+    const preMin       = parseFloat(document.getElementById('precio-min').value) || null
+    const preMax       = parseFloat(document.getElementById('precio-max').value) || null
+
+    if (!sector || !tipo) { alert('Selecciona sector y tipo de inmueble.'); return }
+
+    mostrarLoader(true)
+    ocultarResultados()
+
+    try {
+      const baseQuery = () => {
+        let q = db.from('listings').select('*')
+          .eq('sector', sector).eq('tipo', tipo).eq('activo', true)
+          .order('fecha_scrape', { ascending: false }).limit(200)
+        if (preMin) q = q.gte('precio', preMin)
+        if (preMax) q = q.lte('precio', preMax)
+        if (habitaciones) { if (habitaciones >= 4) q = q.gte('habitaciones', 4); else q = q.eq('habitaciones', habitaciones) }
+        if (banos) { if (banos >= 3) q = q.gte('banos', 3); else q = q.eq('banos', banos) }
+        if (parqueos === '0') q = q.eq('parqueos', 0)
+        else if (parqueos === '1') q = q.eq('parqueos', 1)
+        else if (parqueos === '2') q = q.gte('parqueos', 2)
+        return q
       }
 
-      mostrarLoader(true)
-      ocultarResultados()
-
-      try {
-        const baseQuery = () => {
-          let q = db
-            .from('listings')
-            .select('*')
-            .eq('sector', sector)
-            .eq('tipo', tipo)
-            .eq('activo', true)
-            .order('fecha_scrape', { ascending: false })
-            .limit(200)
-          if (preMin) q = q.gte('precio', preMin)
-          if (preMax) q = q.lte('precio', preMax)
-          if (habitaciones) {
-            if (habitaciones >= 4) q = q.gte('habitaciones', 4)
-            else q = q.eq('habitaciones', habitaciones)
-          }
-          if (banos) {
-            if (banos >= 3) q = q.gte('banos', 3)
-            else q = q.eq('banos', banos)
-          }
-          if (parqueos === '0') q = q.eq('parqueos', 0)
-          else if (parqueos === '1') q = q.eq('parqueos', 1)
-          else if (parqueos === '2') q = q.gte('parqueos', 2)
-          return q
-        }
-
-        let data = []
-        let origenLabel = null
-
-        if (urbanizacion) {
-          const { data: dataUrb, error: errUrb } = await baseQuery().ilike('titulo', `%${urbanizacion}%`)
-          if (errUrb) throw errUrb
-
-          if (dataUrb && dataUrb.length >= 5) {
-            data = dataUrb
-            origenLabel = { texto: `${dataUrb.length} en ${urbanizacion}`, tipo: 'urb' }
-          } else {
-            const { data: dataSector, error: errSector } = await baseQuery()
-            if (errSector) throw errSector
-            data = dataSector || []
-            const enUrb = dataUrb ? dataUrb.length : 0
-            origenLabel = {
-              texto: enUrb > 0
-                ? `${enUrb} en ${urbanizacion} · ${data.length} del sector completo`
-                : `Sin resultados en ${urbanizacion} · mostrando ${data.length} del sector`,
-              tipo: 'fallback'
-            }
-          }
+      let data = [], origenLabel = null
+      if (urbanizacion) {
+        const { data: dUrb, error: eUrb } = await baseQuery().ilike('titulo', `%${urbanizacion}%`)
+        if (eUrb) throw eUrb
+        if (dUrb && dUrb.length >= 5) {
+          data = dUrb; origenLabel = { texto: `${dUrb.length} en ${urbanizacion}`, tipo: 'urb' }
         } else {
-          const { data: dataSector, error } = await baseQuery()
-          if (error) throw error
-          data = dataSector || []
+          const { data: dSec, error: eSec } = await baseQuery()
+          if (eSec) throw eSec
+          data = dSec || []
+          const n = dUrb ? dUrb.length : 0
+          origenLabel = { texto: n > 0 ? `${n} en ${urbanizacion} · ${data.length} del sector` : `Sin resultados en ${urbanizacion} · ${data.length} del sector`, tipo: 'fallback' }
         }
-
-        mostrarLoader(false)
-        renderResultados(data, sector, tipo, { areaTotal, areaCons, pisos, acabados }, origenLabel)
-      } catch (err) {
-        mostrarLoader(false)
-        document.getElementById('error-wrap').classList.remove('hidden')
-        console.error(err)
-      }
-    }
-
-    function renderResultados(listings, sector, tipo, ficha, origenLabel) {
-      document.getElementById('resultados').classList.remove('hidden')
-
-      const conPrecio = listings.filter(l => l.precio > 0)
-      const conM2     = listings.filter(l => l.precio_m2 > 0)
-
-      document.getElementById('titulo-resultados').textContent =
-        `${tipo}s en ${sector} — ${conPrecio.length} comparables encontrados`
-
-      // Badge de origen
-      const badge = document.getElementById('badge-origen')
-      if (origenLabel) {
-        badge.textContent = origenLabel.texto
-        badge.className = origenLabel.tipo === 'urb'
-          ? 'text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700'
-          : 'text-xs px-2.5 py-1 rounded-full font-medium bg-yellow-100 text-yellow-700'
-        badge.classList.remove('hidden')
       } else {
-        badge.classList.add('hidden')
+        const { data: dSec, error } = await baseQuery()
+        if (error) throw error
+        data = dSec || []
       }
 
-      // Estadísticas
-      const avg   = promedio(conPrecio.map(l => l.precio))
-      const mn    = Math.min(...conPrecio.map(l => l.precio))
-      const mx    = Math.max(...conPrecio.map(l => l.precio))
-      const avgM2 = promedio(conM2.map(l => l.precio_m2))
+      _listings = data; _sector = sector; _tipo = tipo; _urb = urbanizacion
+      _ficha = { areaTotal, areaCons, pisos, acabados, habitaciones, banos, parqueos }
+      const cp = data.filter(l => l.precio > 0), cm = data.filter(l => l.precio_m2 > 0)
+      _stats = {
+        avg: prom(cp.map(l => l.precio)),
+        min: cp.length ? Math.min(...cp.map(l => l.precio)) : null,
+        max: cp.length ? Math.max(...cp.map(l => l.precio)) : null,
+        avgM2: prom(cm.map(l => l.precio_m2)),
+        count: cp.length,
+      }
+      mostrarLoader(false)
+      renderResultados(data, sector, tipo, { areaTotal, areaCons, pisos, acabados }, origenLabel)
+    } catch (err) {
+      mostrarLoader(false)
+      document.getElementById('error-wrap').classList.remove('hidden')
+      console.error(err)
+    }
+  }
 
-      document.getElementById('stats-grid').innerHTML = [
-        { label: 'Precio promedio',  valor: avg   ? fmt.format(avg) : '—' },
-        { label: 'Precio mínimo',    valor: conPrecio.length ? fmt.format(mn) : '—' },
-        { label: 'Precio máximo',    valor: conPrecio.length ? fmt.format(mx) : '—' },
-        { label: 'Promedio USD/m²',  valor: avgM2 ? fmtM2(avgM2) : '—' },
-      ].map(s => `
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-          <p class="text-xs text-gray-500 mb-1">${s.label}</p>
-          <p class="text-xl font-bold text-gray-800">${s.valor}</p>
+  function renderResultados(listings, sector, tipo, ficha, origenLabel) {
+    document.getElementById('resultados').classList.remove('hidden')
+    const cp = listings.filter(l => l.precio > 0), cm = listings.filter(l => l.precio_m2 > 0)
+    const avg = prom(cp.map(l => l.precio)), mn = cp.length ? Math.min(...cp.map(l => l.precio)) : null
+    const mx = cp.length ? Math.max(...cp.map(l => l.precio)) : null, avgM2 = prom(cm.map(l => l.precio_m2))
+
+    document.getElementById('titulo-resultados').textContent = `${tipo}s en ${sector} — ${cp.length} comparables encontrados`
+
+    const badge = document.getElementById('badge-origen')
+    if (origenLabel) {
+      badge.textContent = origenLabel.texto
+      badge.className = origenLabel.tipo === 'urb'
+        ? 'text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700'
+        : 'text-xs px-2.5 py-1 rounded-full font-medium bg-yellow-100 text-yellow-700'
+      badge.classList.remove('hidden')
+    } else { badge.classList.add('hidden') }
+
+    document.getElementById('stats-grid').innerHTML = [
+      { label: 'Precio promedio', valor: avg ? fmt.format(avg) : '—' },
+      { label: 'Precio mínimo',   valor: mn  ? fmt.format(mn)  : '—' },
+      { label: 'Precio máximo',   valor: mx  ? fmt.format(mx)  : '—' },
+      { label: 'Promedio USD/m²', valor: avgM2 ? fmtM2(avgM2) : '—' },
+    ].map(s => `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4"><p class="text-xs text-gray-500 mb-1">${s.label}</p><p class="text-xl font-bold text-gray-800">${s.valor}</p></div>`).join('')
+
+    const estWrap = document.getElementById('estimacion-wrap')
+    const areaEst = ficha.areaCons || ficha.areaTotal
+    if (areaEst && avgM2) {
+      document.getElementById('estimacion-valor').textContent = fmt.format(areaEst * avgM2)
+      document.getElementById('estimacion-detalle').textContent = `${fmtN(areaEst)} m² ${ficha.areaCons ? 'construcción' : 'total'} × ${fmtM2(avgM2)}`
+      estWrap.classList.remove('hidden')
+    } else { estWrap.classList.add('hidden') }
+
+    const fichaItems = []
+    if (ficha.areaTotal) fichaItems.push(`<span><strong>Total:</strong> ${fmtN(ficha.areaTotal)} m²</span>`)
+    if (ficha.areaCons)  fichaItems.push(`<span><strong>Construcción:</strong> ${fmtN(ficha.areaCons)} m²</span>`)
+    if (ficha.pisos)     fichaItems.push(`<span><strong>Pisos:</strong> ${ficha.pisos}</span>`)
+    if (ficha.acabados)  fichaItems.push(`<span><strong>Acabados:</strong> ${ACABADOS[ficha.acabados]}</span>`)
+    const fichaWrap = document.getElementById('ficha-wrap')
+    if (fichaItems.length) { document.getElementById('ficha-contenido').innerHTML = fichaItems.join(''); fichaWrap.classList.remove('hidden') }
+    else { fichaWrap.classList.add('hidden') }
+
+    const lista = document.getElementById('lista-comparables'), sinRes = document.getElementById('sin-resultados')
+    if (!listings.length) { lista.innerHTML = ''; sinRes.classList.remove('hidden'); document.getElementById('btn-informe-wrap').classList.add('hidden'); return }
+    sinRes.classList.add('hidden')
+    lista.innerHTML = listings.slice(0, 50).map(l => `
+      <a href="${l.url_fuente}" target="_blank" rel="noopener" class="card-hover block bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-4">
+        ${l.imagen_url ? `<img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block" onerror="this.style.display='none'" />` : ''}
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-800 text-sm truncate">${l.titulo || tipo + ' en ' + sector}</p>
+          <p class="text-xs text-gray-500 mt-0.5 truncate">${l.direccion || sector}</p>
+          <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 items-center">
+            ${l.precio    ? `<span class="font-bold text-brand text-sm">${fmt.format(l.precio)}</span>` : ''}
+            ${l.area_m2   ? `<span>${fmtN(l.area_m2)} m²</span>` : ''}
+            ${l.precio_m2 ? `<span class="text-gray-400">${fmtM2(l.precio_m2)}</span>` : ''}
+            ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
+            ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
+            ${l.parqueos     ? `<span>🚗 ${l.parqueos}</span>` : ''}
+          </div>
         </div>
-      `).join('')
+        <div class="flex-shrink-0 text-blue-400 self-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </div>
+      </a>`).join('')
+    document.getElementById('btn-informe-wrap').classList.remove('hidden')
+  }
 
-      // Estimación de valor
-      const estWrap = document.getElementById('estimacion-wrap')
-      const areaParaEstimar = ficha.areaCons || ficha.areaTotal
-      if (areaParaEstimar && avgM2) {
-        const estimado = areaParaEstimar * avgM2
-        const tipoArea = ficha.areaCons ? 'construcción' : 'total'
-        document.getElementById('estimacion-valor').textContent = fmt.format(estimado)
-        document.getElementById('estimacion-detalle').textContent =
-          `${fmtN(areaParaEstimar)} m² de ${tipoArea} × ${fmtM2(avgM2)} (promedio del sector)`
-        estWrap.classList.remove('hidden')
-      } else {
-        estWrap.classList.add('hidden')
-      }
+  // ── Modal ──
+  document.getElementById('btn-generar-informe').addEventListener('click', () => document.getElementById('modal-informe').classList.remove('hidden'))
+  document.getElementById('btn-modal-cerrar').addEventListener('click', () => document.getElementById('modal-informe').classList.add('hidden'))
+  document.getElementById('btn-descargar-pdf').addEventListener('click', () => { construirReporte(); document.getElementById('modal-informe').classList.add('hidden'); setTimeout(() => window.print(), 400) })
+  document.getElementById('btn-enviar-email').addEventListener('click', enviarCorreo)
 
-      // Ficha referencial (pisos y acabados)
-      const fichaWrap = document.getElementById('ficha-wrap')
-      const fichaItems = []
-      if (ficha.areaTotal)  fichaItems.push(`<span><strong>Total:</strong> ${fmtN(ficha.areaTotal)} m²</span>`)
-      if (ficha.areaCons)   fichaItems.push(`<span><strong>Construcción:</strong> ${fmtN(ficha.areaCons)} m²</span>`)
-      if (ficha.pisos)      fichaItems.push(`<span><strong>Pisos:</strong> ${ficha.pisos}</span>`)
-      if (ficha.acabados)   fichaItems.push(`<span><strong>Acabados:</strong> ${ACABADOS_LABEL[ficha.acabados]}</span>`)
-      if (fichaItems.length) {
-        document.getElementById('ficha-contenido').innerHTML = fichaItems.join('')
-        fichaWrap.classList.remove('hidden')
-      } else {
-        fichaWrap.classList.add('hidden')
-      }
+  function enviarCorreo() {
+    const cn = document.getElementById('cliente-nombre').value || 'Cliente'
+    const ce = document.getElementById('cliente-email').value
+    const dir = document.getElementById('inmueble-direccion').value || `${_tipo} en ${_sector}`
+    const areaEst = _ficha.areaCons || _ficha.areaTotal
+    const val = areaEst && _stats.avgM2 ? fmt.format(areaEst * _stats.avgM2) : 'Ver informe adjunto'
+    const asunto = encodeURIComponent(`Avalúo Comercial — ${_tipo} en ${_sector}`)
+    const cuerpo = encodeURIComponent(`Estimado/a ${cn},\n\nAdjunto encontrará el Avalúo Comercial del inmueble ubicado en:\n${dir}\n\nRESUMEN EJECUTIVO\n• Tipo: ${_tipo} | Sector: ${_sector}\n• Valor estimado: ${val}\n• Precio promedio del sector: ${_stats.avg ? fmt.format(_stats.avg) : '—'}\n• Rango de mercado: ${_stats.min ? fmt.format(_stats.min) : '—'} – ${_stats.max ? fmt.format(_stats.max) : '—'}\n• Precio promedio USD/m²: ${_stats.avgM2 ? fmtM2(_stats.avgM2) : '—'}\n• Comparables analizados: ${_stats.count}\n\nPara cualquier consulta, estoy a su disposición.\n\nAtentamente,\n${AGENTE.nombre}\n${AGENTE.titulo}\nTel: ${AGENTE.telefono}`)
+    window.open(`mailto:${ce}?subject=${asunto}&body=${cuerpo}`)
+    construirReporte()
+    document.getElementById('modal-informe').classList.add('hidden')
+    setTimeout(() => window.print(), 600)
+  }
 
-      // Lista de comparables
-      const lista  = document.getElementById('lista-comparables')
-      const sinRes = document.getElementById('sin-resultados')
+  // ── Construir reporte ──
+  function construirReporte() {
+    const cn   = document.getElementById('cliente-nombre').value || 'Cliente'
+    const dir  = document.getElementById('inmueble-direccion').value || `${_tipo} en ${_sector}`
+    const notas = document.getElementById('agente-notas').value || ''
+    const fecha = new Date().toLocaleDateString('es-EC', { day:'2-digit', month:'long', year:'numeric' })
+    const nro   = `ACM-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*900)+100}`
+    const areaEst = _ficha.areaCons || _ficha.areaTotal
+    const valEst  = areaEst && _stats.avgM2 ? areaEst * _stats.avgM2 : null
+    const comps   = _listings.slice(0, 8)
+    const fuerzas = genFortalezas()
+    const debiles = genDebilidades()
 
-      if (listings.length === 0) {
-        lista.innerHTML = ''
-        sinRes.classList.remove('hidden')
-        return
-      }
-      sinRes.classList.add('hidden')
+    document.getElementById('report').innerHTML =
+      pgPortada(cn, dir, fecha, nro) +
+      pgResumen(valEst, dir, fecha) +
+      pgAnalisis(fuerzas, debiles) +
+      pgTabla(comps) +
+      pgFichas(comps) +
+      pgConclusion(valEst, notas, cn, nro, fecha) +
+      pgContacto()
+  }
 
-      lista.innerHTML = listings.slice(0, 50).map(l => `
-        <a href="${l.url_fuente}" target="_blank" rel="noopener"
-           class="card-hover block bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-4">
-          ${l.imagen_url ? `
-            <img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block"
-              onerror="this.style.display='none'" />` : ''}
-          <div class="flex-1 min-w-0">
-            <p class="font-semibold text-gray-800 text-sm truncate">${l.titulo || tipo + ' en ' + sector}</p>
-            <p class="text-xs text-gray-500 mt-0.5 truncate">${l.direccion || sector}</p>
-            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 items-center">
-              ${l.precio    ? `<span class="font-bold text-brand text-sm">${fmt.format(l.precio)}</span>` : ''}
-              ${l.area_m2   ? `<span>${fmtN(l.area_m2)} m²</span>` : ''}
-              ${l.precio_m2 ? `<span class="text-gray-400">${fmtM2(l.precio_m2)}</span>` : ''}
-              ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
-              ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
-              ${l.parqueos     ? `<span>🚗 ${l.parqueos}</span>` : ''}
-            </div>
+  // ── Páginas ──
+  const H = (nombre, seccion) => `<div style="background:#1e3a5f;padding:5mm 15mm;display:flex;align-items:center;justify-content:space-between;"><p style="color:white;font-size:11pt;font-weight:700;margin:0;">${nombre}</p><p style="color:#c9a84c;font-size:8pt;font-weight:600;margin:0;letter-spacing:.05em;">${seccion}</p></div>`
+  const F = () => `<div style="position:absolute;bottom:5mm;left:15mm;right:15mm;display:flex;justify-content:space-between;font-size:7pt;color:#9ca3af;border-top:1px solid #f1f5f9;padding-top:2mm;"><span>${AGENTE.nombre} · ${AGENTE.titulo}</span><span>Fuente: Plusvalía.com · ${new Date().toLocaleDateString('es-EC')}</span></div>`
+  const sBox = (l,v) => `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:3mm;padding:3mm 4mm;"><p style="font-size:7.5pt;color:#6b7280;margin:0 0 1mm 0;">${l}</p><p style="font-size:10pt;font-weight:700;color:#1e3a5f;margin:0;">${v}</p></div>`
+  const fBox = (l,v) => `<div style="background:#f8fafc;border-radius:2mm;padding:2mm 3mm;"><p style="font-size:7pt;color:#9ca3af;margin:0 0 .5mm 0;text-transform:uppercase;letter-spacing:.05em;">${l}</p><p style="font-size:9pt;font-weight:600;color:#374151;margin:0;">${v}</p></div>`
+  const mStat = (l,v,c) => `<div style="background:#f8fafc;border-radius:2mm;padding:2mm;"><p style="font-size:6.5pt;color:#9ca3af;margin:0 0 .5mm 0;">${l}</p><p style="font-size:8pt;font-weight:700;color:${c};margin:0;">${v}</p></div>`
+
+  function pgPortada(cliente, dir, fecha, nro) {
+    return `<div class="rpt-page" style="background:#1e3a5f;color:white;display:flex;flex-direction:column;justify-content:space-between;padding:20mm 18mm;">
+      <div style="border-bottom:2px solid #c9a84c;padding-bottom:8mm;margin-bottom:8mm;">
+        <p style="color:#c9a84c;font-size:11pt;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin:0 0 2mm 0;">${AGENTE.titulo}</p>
+        <p style="font-size:22pt;font-weight:800;margin:0;">${AGENTE.nombre}</p>
+      </div>
+      <div style="text-align:center;">
+        <p style="color:#c9a84c;font-size:10pt;font-weight:600;letter-spacing:.15em;text-transform:uppercase;margin:0 0 4mm 0;">Análisis Comparativo de Mercado</p>
+        <p style="font-size:32pt;font-weight:800;margin:0 0 3mm 0;letter-spacing:-.02em;">AVALÚO<br>COMERCIAL</p>
+        <div style="width:60mm;height:1px;background:#c9a84c;margin:6mm auto;"></div>
+        <p style="font-size:13pt;font-weight:500;margin:0 0 2mm 0;color:#e2e8f0;">${dir}</p>
+        <p style="font-size:10pt;color:#94a3b8;margin:0;">${_tipo} · ${_sector}${_urb ? ' · ' + _urb : ''}</p>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:6mm;display:flex;justify-content:space-between;align-items:flex-end;">
+        <div><p style="color:#c9a84c;font-size:8pt;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin:0 0 1mm 0;">Preparado para</p><p style="font-size:11pt;font-weight:600;margin:0;">${cliente}</p></div>
+        <div style="text-align:right;"><p style="font-size:8pt;color:#94a3b8;margin:0 0 1mm 0;">${fecha}</p><p style="font-size:8pt;color:#c9a84c;font-weight:600;margin:0;">${nro}</p></div>
+      </div>
+    </div>`
+  }
+
+  function pgResumen(valEst, dir, fecha) {
+    const areaEst = _ficha.areaCons || _ficha.areaTotal
+    const tipoArea = _ficha.areaCons ? 'construcción' : 'total'
+    return `<div class="rpt-page" style="padding:0;">
+      ${H(AGENTE.nombre, 'RESUMEN EJECUTIVO')}
+      <div style="padding:10mm 15mm 16mm;">
+        ${valEst ? `<div style="background:linear-gradient(135deg,#1e3a5f,#2d5a8e);border-radius:8mm;padding:10mm;text-align:center;margin-bottom:7mm;color:white;"><p style="font-size:9pt;color:#93c5fd;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin:0 0 3mm 0;">Valor estimado del inmueble</p><p style="font-size:34pt;font-weight:800;color:#c9a84c;margin:0 0 2mm 0;">${fmt.format(valEst)}</p><p style="font-size:9pt;color:#93c5fd;margin:0;">${fmtN(areaEst)} m² ${tipoArea} × ${fmtM2(_stats.avgM2)}</p></div>`
+          : `<div style="background:#f8fafc;border:2px solid #e2e8f0;border-radius:8mm;padding:8mm;text-align:center;margin-bottom:7mm;"><p style="font-size:9pt;color:#64748b;margin:0 0 2mm 0;">Rango de mercado</p><p style="font-size:24pt;font-weight:800;color:#1e3a5f;margin:0;">${_stats.min ? fmt.format(_stats.min) : '—'} – ${_stats.max ? fmt.format(_stats.max) : '—'}</p></div>`}
+        <p style="font-size:9pt;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.05em;margin:0 0 4mm 0;border-bottom:1px solid #e2e8f0;padding-bottom:2mm;">Estadísticas del mercado</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin-bottom:7mm;">
+          ${sBox('Precio promedio', _stats.avg ? fmt.format(_stats.avg) : '—')}
+          ${sBox('Precio mínimo', _stats.min ? fmt.format(_stats.min) : '—')}
+          ${sBox('Precio máximo', _stats.max ? fmt.format(_stats.max) : '—')}
+          ${sBox('Promedio USD/m²', _stats.avgM2 ? fmtM2(_stats.avgM2) : '—')}
+          ${sBox('Comparables analizados', _stats.count + ' propiedades')}
+          ${sBox('Fuente de datos', 'Plusvalía.com')}
+        </div>
+        <p style="font-size:9pt;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.05em;margin:0 0 4mm 0;border-bottom:1px solid #e2e8f0;padding-bottom:2mm;">Ficha del inmueble valorado</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2mm;">
+          ${fBox('Tipo', _tipo)} ${fBox('Sector', _sector)}
+          ${_urb ? fBox('Urbanización', _urb) : ''}
+          ${_ficha.areaTotal ? fBox('Metraje total', fmtN(_ficha.areaTotal) + ' m²') : ''}
+          ${_ficha.areaCons  ? fBox('Metraje construcción', fmtN(_ficha.areaCons) + ' m²') : ''}
+          ${_ficha.habitaciones ? fBox('Habitaciones', _ficha.habitaciones) : ''}
+          ${_ficha.banos ? fBox('Baños', _ficha.banos) : ''}
+          ${_ficha.parqueos !== '' && _ficha.parqueos != null ? fBox('Parqueos', _ficha.parqueos === '0' ? 'Sin parqueo' : _ficha.parqueos) : ''}
+          ${_ficha.pisos   ? fBox('Pisos', _ficha.pisos) : ''}
+          ${_ficha.acabados ? fBox('Acabados', ACABADOS[_ficha.acabados]) : ''}
+        </div>
+      </div>
+      ${F()}
+    </div>`
+  }
+
+  function pgAnalisis(fortalezas, debilidades) {
+    return `<div class="rpt-page" style="padding:0;">
+      ${H(AGENTE.nombre, 'ANÁLISIS TÉCNICO')}
+      <div style="padding:10mm 15mm 16mm;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6mm;margin-bottom:8mm;">
+          <div>
+            <div style="background:#dcfce7;border-radius:4mm;padding:4mm 5mm;margin-bottom:3mm;"><p style="font-size:9pt;font-weight:700;color:#166534;margin:0;text-transform:uppercase;letter-spacing:.05em;">✓ Puntos fuertes</p></div>
+            ${fortalezas.map(f => `<div style="display:flex;gap:3mm;padding:3mm 0;border-bottom:1px solid #f1f5f9;"><span style="color:#16a34a;font-weight:700;font-size:11pt;flex-shrink:0;">+</span><p style="font-size:9pt;color:#374151;margin:0;line-height:1.5;">${f}</p></div>`).join('')}
           </div>
-          <div class="flex-shrink-0 text-blue-400 self-center">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-            </svg>
+          <div>
+            <div style="background:#fef3c7;border-radius:4mm;padding:4mm 5mm;margin-bottom:3mm;"><p style="font-size:9pt;font-weight:700;color:#92400e;margin:0;text-transform:uppercase;letter-spacing:.05em;">⚠ Puntos a considerar</p></div>
+            ${debilidades.map(d => `<div style="display:flex;gap:3mm;padding:3mm 0;border-bottom:1px solid #f1f5f9;"><span style="color:#d97706;font-weight:700;font-size:11pt;flex-shrink:0;">!</span><p style="font-size:9pt;color:#374151;margin:0;line-height:1.5;">${d}</p></div>`).join('')}
           </div>
-        </a>
-      `).join('')
-    }
+        </div>
+        <p style="font-size:9pt;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.05em;margin:0 0 4mm 0;border-bottom:1px solid #e2e8f0;padding-bottom:2mm;">Contexto del sector — ${_sector}</p>
+        <div style="background:#f8fafc;border-radius:4mm;padding:5mm;font-size:9pt;color:#374151;line-height:1.8;">
+          <p style="margin:0 0 2mm 0;">• El sector de <strong>${_sector}</strong> presenta <strong>${_stats.count} propiedades activas</strong> tipo ${_tipo} en el mercado según Plusvalía.com.</p>
+          <p style="margin:0 0 2mm 0;">• Precio promedio por m²: <strong>${_stats.avgM2 ? fmtM2(_stats.avgM2) : '—'}</strong> — rango: <strong>${_stats.min ? fmt.format(_stats.min) : '—'}</strong> a <strong>${_stats.max ? fmt.format(_stats.max) : '—'}</strong>.</p>
+          <p style="margin:0 0 2mm 0;">• ${_stats.count >= 10 ? 'Alta liquidez y demanda activa en el sector.' : _stats.count >= 5 ? 'Actividad moderada con comparables suficientes para el análisis.' : 'Mercado nicho con baja oferta — puede favorecer la valoración del inmueble.'}</p>
+          <p style="margin:0;">• Datos actualizados diariamente desde Plusvalía.com, garantizando información de mercado vigente.</p>
+        </div>
+      </div>
+      ${F()}
+    </div>`
+  }
 
-    function promedio(arr) {
-      if (!arr.length) return null
-      return arr.reduce((a, b) => a + b, 0) / arr.length
-    }
+  function pgTabla(comps) {
+    return `<div class="rpt-page" style="padding:0;">
+      ${H(AGENTE.nombre, 'TABLA COMPARATIVA')}
+      <div style="padding:8mm 15mm 16mm;">
+        <p style="font-size:9pt;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.05em;margin:0 0 4mm 0;border-bottom:1px solid #e2e8f0;padding-bottom:2mm;">Propiedades comparables — ${comps.length} seleccionadas</p>
+        <table style="width:100%;border-collapse:collapse;font-size:8pt;">
+          <thead><tr style="background:#1e3a5f;color:white;">
+            <th style="padding:3mm 2mm;text-align:left;">#</th>
+            <th style="padding:3mm 2mm;text-align:left;">Propiedad</th>
+            <th style="padding:3mm 2mm;text-align:right;">Precio</th>
+            <th style="padding:3mm 2mm;text-align:right;">m²</th>
+            <th style="padding:3mm 2mm;text-align:right;">USD/m²</th>
+            <th style="padding:3mm 2mm;text-align:center;">Dorm.</th>
+            <th style="padding:3mm 2mm;text-align:center;">Baños</th>
+            <th style="padding:3mm 2mm;text-align:center;">Park.</th>
+          </tr></thead>
+          <tbody>
+            ${comps.map((l, i) => `<tr style="background:${i%2===0?'white':'#f8fafc'};border-bottom:1px solid #e2e8f0;">
+              <td style="padding:3mm 2mm;font-weight:700;color:#1e3a5f;">${i+1}</td>
+              <td style="padding:3mm 2mm;"><p style="margin:0;font-weight:600;color:#1f2937;line-height:1.3;">${(l.titulo||_tipo+' en '+_sector).slice(0,55)}${(l.titulo||'').length>55?'...':''}</p><p style="margin:1mm 0 0 0;color:#6b7280;font-size:7pt;">${l.direccion||_sector}</p></td>
+              <td style="padding:3mm 2mm;text-align:right;font-weight:700;color:#1e3a5f;">${l.precio?fmt.format(l.precio):'—'}</td>
+              <td style="padding:3mm 2mm;text-align:right;">${l.area_m2?fmtN(l.area_m2):'—'}</td>
+              <td style="padding:3mm 2mm;text-align:right;">${l.precio_m2?fmtN(l.precio_m2):'—'}</td>
+              <td style="padding:3mm 2mm;text-align:center;">${l.habitaciones||'—'}</td>
+              <td style="padding:3mm 2mm;text-align:center;">${l.banos||'—'}</td>
+              <td style="padding:3mm 2mm;text-align:center;">${l.parqueos!=null?l.parqueos:'—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <p style="margin:4mm 0 0 0;font-size:7pt;color:#9ca3af;text-align:right;">Fuente: Plusvalía.com · ${new Date().toLocaleDateString('es-EC')} · Links de verificación en fichas individuales</p>
+      </div>
+      ${F()}
+    </div>`
+  }
 
-    function mostrarLoader(show) {
-      document.getElementById('loader-wrap').classList.toggle('hidden', !show)
+  function pgFichas(comps) {
+    let html = ''
+    for (let i = 0; i < comps.length; i += 2) {
+      const grupo = comps.slice(i, i + 2)
+      html += `<div class="rpt-page" style="padding:0;">
+        ${H(AGENTE.nombre, 'FICHAS DE COMPARABLES')}
+        <div style="padding:8mm 15mm 16mm;display:flex;flex-direction:column;gap:6mm;">
+          ${grupo.map((l, idx) => fichaCard(l, i+idx+1)).join('')}
+        </div>
+        ${F()}
+      </div>`
     }
+    return html
+  }
 
-    function ocultarResultados() {
-      document.getElementById('resultados').classList.add('hidden')
-      document.getElementById('error-wrap').classList.add('hidden')
-    }
-  </script>
+  function fichaCard(l, num) {
+    return `<div style="border:1px solid #e2e8f0;border-radius:4mm;overflow:hidden;">
+      <div style="display:grid;grid-template-columns:55mm 1fr;">
+        ${l.imagen_url
+          ? `<img src="${l.imagen_url}" style="width:55mm;height:42mm;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=width:55mm;height:42mm;background:#f1f5f9;display:flex;align-items:center;justify-content:center><span style=color:#94a3b8;font-size:8pt>Sin imagen</span></div>'" />`
+          : `<div style="width:55mm;height:42mm;background:#f1f5f9;display:flex;align-items:center;justify-content:center;"><span style="color:#94a3b8;font-size:8pt;">Sin imagen</span></div>`}
+        <div style="padding:4mm;">
+          <div style="display:flex;align-items:flex-start;gap:2mm;margin-bottom:2mm;">
+            <span style="background:#1e3a5f;color:white;font-size:8pt;font-weight:700;padding:1mm 3mm;border-radius:2mm;flex-shrink:0;">${num}</span>
+            <p style="font-size:9pt;font-weight:700;color:#1e3a5f;margin:0;line-height:1.3;">${(l.titulo||_tipo+' en '+_sector).slice(0,65)}${(l.titulo||'').length>65?'...':''}</p>
+          </div>
+          <p style="font-size:7.5pt;color:#6b7280;margin:0 0 3mm 0;">${l.direccion||_sector}</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm;">
+            ${l.precio      ? mStat('Precio', fmt.format(l.precio), '#1e3a5f') : ''}
+            ${l.area_m2     ? mStat('Superficie', fmtN(l.area_m2)+' m²', '#374151') : ''}
+            ${l.precio_m2   ? mStat('USD/m²', fmtN(l.precio_m2), '#374151') : ''}
+            ${l.habitaciones ? mStat('Dormitorios', l.habitaciones, '#374151') : ''}
+            ${l.banos        ? mStat('Baños', l.banos, '#374151') : ''}
+            ${l.parqueos     ? mStat('Parqueos', l.parqueos, '#374151') : ''}
+          </div>
+        </div>
+      </div>
+      <div style="background:#f8fafc;padding:2mm 4mm;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:4mm;">
+        <p style="font-size:7pt;color:#6b7280;margin:0;flex-shrink:0;">🔗 Verificar en Plusvalía.com:</p>
+        <p style="font-size:7pt;color:#1a56db;margin:0;word-break:break-all;">${l.url_fuente}</p>
+      </div>
+    </div>`
+  }
+
+  function pgConclusion(valEst, notas, cliente, nro, fecha) {
+    const areaEst = _ficha.areaCons || _ficha.areaTotal
+    const conclusion = valEst
+      ? `El valor comercial estimado del inmueble es de <strong>${fmt.format(valEst)}</strong>, calculado con base en un precio promedio de ${fmtM2(_stats.avgM2)} para el sector. El análisis fue realizado sobre <strong>${_stats.count} propiedades comparables</strong> activas en <strong>${_sector}${_urb ? ' · ' + _urb : ''}</strong>, con datos actualizados al ${fecha} desde Plusvalía.com. El precio de mercado oscila entre ${_stats.min?fmt.format(_stats.min):'—'} y ${_stats.max?fmt.format(_stats.max):'—'}. Este valor es referencial y puede ajustarse según condiciones físicas del inmueble, negociación entre partes y condiciones del mercado al momento de la transacción.`
+      : `Con base en el análisis de <strong>${_stats.count} comparables</strong> en el sector de <strong>${_sector}</strong>, el rango de mercado para ${_tipo.toLowerCase()}s similares se sitúa entre <strong>${_stats.min?fmt.format(_stats.min):'—'}</strong> y <strong>${_stats.max?fmt.format(_stats.max):'—'}</strong>, con un precio promedio de <strong>${_stats.avg?fmt.format(_stats.avg):'—'}</strong> y un precio por m² de <strong>${_stats.avgM2?fmtM2(_stats.avgM2):'—'}</strong>. Datos vigentes al ${fecha}.`
+
+    return `<div class="rpt-page" style="padding:0;">
+      ${H(AGENTE.nombre, 'CONCLUSIÓN TÉCNICA')}
+      <div style="padding:10mm 15mm 16mm;">
+        <div style="background:#f8fafc;border-left:4mm solid #c9a84c;padding:6mm 8mm;border-radius:0 4mm 4mm 0;margin-bottom:6mm;">
+          <p style="font-size:9pt;color:#374151;line-height:1.9;margin:0;">${conclusion}</p>
+        </div>
+        ${notas ? `<p style="font-size:9pt;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.05em;margin:0 0 3mm 0;">Observaciones del agente</p><div style="background:#fff;border:1px solid #e2e8f0;padding:5mm;border-radius:3mm;margin-bottom:6mm;"><p style="font-size:9pt;color:#374151;line-height:1.8;margin:0;">${notas}</p></div>` : ''}
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:3mm;padding:4mm 5mm;margin-bottom:6mm;">
+          <p style="font-size:8pt;color:#0369a1;margin:0;line-height:1.6;"><strong>Nota legal:</strong> El presente análisis es un estudio comparativo de mercado con fines referenciales, basado en datos públicos de Plusvalía.com. No reemplaza una tasación oficial. Los valores pueden variar según las condiciones físicas específicas, la negociación y el mercado al momento de la transacción.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm;font-size:8pt;">
+          ${fBox('Informe N°', nro)} ${fBox('Preparado para', cliente)}
+          ${fBox('Fecha de emisión', fecha)} ${fBox('Preparado por', AGENTE.nombre)}
+        </div>
+      </div>
+      ${F()}
+    </div>`
+  }
+
+  function pgContacto() {
+    return `<div class="rpt-page" style="padding:0;display:flex;flex-direction:column;">
+      ${H(AGENTE.nombre, 'CONTACTO')}
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:15mm;text-align:center;">
+        <div style="width:25mm;height:25mm;background:#e2e8f0;border-radius:50%;margin-bottom:6mm;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:12pt;color:#94a3b8;font-weight:700;">JBH</span>
+        </div>
+        <p style="font-size:20pt;font-weight:800;color:#1e3a5f;margin:0 0 1mm 0;">${AGENTE.nombre}</p>
+        <p style="font-size:11pt;color:#c9a84c;font-weight:600;margin:0 0 8mm 0;">${AGENTE.titulo}</p>
+        <div style="display:flex;flex-direction:column;gap:3mm;font-size:11pt;color:#374151;margin-bottom:10mm;">
+          <p style="margin:0;">📱 ${AGENTE.telefono}</p>
+          <p style="margin:0;">✉ ${AGENTE.email}</p>
+          <p style="margin:0;">📍 Guayaquil, Ecuador</p>
+        </div>
+        <div style="width:40mm;height:1px;background:#c9a84c;margin:0 auto 8mm;"></div>
+        <p style="font-size:8pt;color:#9ca3af;margin:0;">Datos actualizados diariamente · Plusvalía.com</p>
+        <p style="font-size:8pt;color:#9ca3af;margin:2mm 0 0 0;">© ${new Date().getFullYear()} ${AGENTE.nombre} · Todos los derechos reservados</p>
+      </div>
+    </div>`
+  }
+
+  // ── Auto-análisis ──
+  function genFortalezas() {
+    const f = [`Ubicación estratégica en ${_sector}, sector con alta demanda en Guayaquil`]
+    if (_ficha.habitaciones >= 3) f.push(`Amplia distribución con ${_ficha.habitaciones} dormitorios, ideal para familias`)
+    if (_ficha.parqueos >= 2 || _ficha.parqueos === '2') f.push('Doble parqueo incluido, característica de alta valoración en el sector')
+    else if (_ficha.parqueos == 1 || _ficha.parqueos === '1') f.push('Parqueo privado incluido')
+    if (_ficha.acabados === 'lujo') f.push('Acabados de lujo que posicionan el inmueble en el segmento premium')
+    if (_ficha.acabados === 'moderno') f.push('Acabados modernos y contemporáneos que incrementan el atractivo comercial')
+    if (_ficha.pisos === '2') f.push('Distribución en dos plantas que optimiza el aprovechamiento del espacio')
+    if (_stats.count >= 10) f.push('Sector con alta liquidez y múltiples referencias de mercado activas')
+    if (_ficha.areaCons && _ficha.areaTotal && (_ficha.areaCons / _ficha.areaTotal) > 0.65) f.push('Alta relación construcción/terreno que maximiza el espacio habitable útil')
+    return f.slice(0, 5)
+  }
+
+  function genDebilidades() {
+    const d = []
+    if (_stats.count < 5) d.push('Pocos comparables activos en el sector, lo que puede dificultar la negociación')
+    if (_ficha.acabados === 'estandar') d.push('Acabados estándar con margen de mejora para incrementar el valor del inmueble')
+    if (_ficha.pisos === '1') d.push('Inmueble de una planta con menor aprovechamiento del área de terreno')
+    if (!_ficha.parqueos || _ficha.parqueos === '0') d.push('Sin parqueo propio — puede limitar el universo de compradores potenciales')
+    d.push('La antigüedad y estado de conservación deben ser evaluados en inspección física')
+    d.push('Las condiciones del mercado pueden variar en el corto plazo')
+    return d.slice(0, 4)
+  }
+
+  // ── Utilidades ──
+  function prom(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null }
+  function mostrarLoader(s) { document.getElementById('loader-wrap').classList.toggle('hidden', !s) }
+  function ocultarResultados() { document.getElementById('resultados').classList.add('hidden'); document.getElementById('error-wrap').classList.add('hidden') }
+</script>
 </body>
 </html>
