@@ -430,17 +430,65 @@
 
     const reportEl = document.getElementById('report')
     reportEl.style.cssText = 'display:block;position:fixed;left:-9999px;top:0;z-index:-1;'
-    await new Promise(r => setTimeout(r, 350))
+    await new Promise(r => setTimeout(r, 300))
+
+    // Pre-cargar imágenes externas como data URL para evitar CORS en canvas
+    await Promise.allSettled(
+      Array.from(reportEl.querySelectorAll('img[src^="http"]')).map(img =>
+        new Promise(resolve => {
+          const tmp = new Image()
+          tmp.crossOrigin = 'anonymous'
+          tmp.onload = () => {
+            try {
+              const cv = document.createElement('canvas')
+              cv.width = tmp.naturalWidth; cv.height = tmp.naturalHeight
+              cv.getContext('2d').drawImage(tmp, 0, 0)
+              img.src = cv.toDataURL('image/jpeg', 0.85)
+            } catch {}
+            resolve()
+          }
+          tmp.onerror = resolve
+          setTimeout(resolve, 6000)
+          tmp.src = img.src
+        })
+      )
+    )
+    await new Promise(r => setTimeout(r, 200))
 
     try {
       const { jsPDF } = window.jspdf
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
       const pages = reportEl.querySelectorAll('.rpt-page')
+
+      // Recolectar posición de todos los links antes de renderizar
+      const todosLinks = []
+      pages.forEach((page, pageIdx) => {
+        const pr = page.getBoundingClientRect()
+        const escX = 210 / pr.width
+        const escY = 297 / pr.height
+        page.querySelectorAll('a.rpt-ext-link[href]').forEach(a => {
+          const ar = a.getBoundingClientRect()
+          todosLinks.push({
+            pageIdx,
+            x: (ar.left - pr.left) * escX,
+            y: (ar.top  - pr.top)  * escY,
+            w: Math.max(ar.width  * escX, 30),
+            h: Math.max(ar.height * escY, 4),
+            url: a.href,
+          })
+        })
+      })
+
       for (let i = 0; i < pages.length; i++) {
         if (i > 0) pdf.addPage()
-        const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true, allowTaint: true })
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, 210, 297)
+        const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true, logging: false })
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297)
+        // Agregar anotaciones de links clicables sobre la imagen
+        todosLinks.filter(l => l.pageIdx === i).forEach(l => {
+          pdf.link(l.x, l.y, l.w, l.h, { url: l.url })
+        })
       }
+
       const nombreArchivo = `ACM-${_sector.replace(/\s+/g,'-')}-${_tipo}-${new Date().toISOString().slice(0,10)}.pdf`
       pdf.save(nombreArchivo)
     } finally {
@@ -778,7 +826,7 @@ Tel: ${AGENTE.telefono}
     return `<div class="rpt-card" style="border:1px solid #e5e7eb;border-radius:3mm;overflow:hidden;">
       <div style="display:grid;grid-template-columns:58mm 1fr;">
         ${l.imagen_url
-          ? `<img src="${l.imagen_url}" style="width:58mm;height:46mm;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div style="display:none;width:58mm;height:46mm;background:#f1f5f9;align-items:center;justify-content:center;"><span style="color:#cbd5e1;font-size:24pt;">⌂</span></div>`
+          ? `<img src="${l.imagen_url}" crossorigin="anonymous" style="width:58mm;height:46mm;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div style="display:none;width:58mm;height:46mm;background:#f1f5f9;align-items:center;justify-content:center;"><span style="color:#cbd5e1;font-size:24pt;">⌂</span></div>`
           : `<div style="width:58mm;height:46mm;background:#f1f5f9;display:flex;align-items:center;justify-content:center;"><span style="color:#cbd5e1;font-size:24pt;">⌂</span></div>`}
         <div style="padding:4mm 5mm;">
           <div style="display:flex;align-items:flex-start;gap:2.5mm;margin-bottom:2.5mm;">
@@ -803,7 +851,7 @@ Tel: ${AGENTE.telefono}
       </div>
       <div style="background:#f9fafb;border-top:1px solid #f1f5f9;padding:2mm 4mm;display:flex;align-items:center;gap:3mm;">
         <p style="font-size:6pt;color:#9ca3af;margin:0;flex-shrink:0;">Verificar en Plusvalía.com:</p>
-        <p style="font-size:6pt;color:#1a56db;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.url_fuente}</p>
+        <a class="rpt-ext-link" href="${l.url_fuente}" style="font-size:6pt;color:#1a56db;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:underline;display:block;">${l.url_fuente}</a>
       </div>
     </div>`
   }
