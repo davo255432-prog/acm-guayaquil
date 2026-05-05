@@ -20,9 +20,9 @@ from supabase import create_client
 
 from config import (
     SUPABASE_URL, SUPABASE_KEY, SCRAPERAPI_KEY,
-    SECTORES, TIPOS,
-    MAX_PAGINAS, DELAY_SEGUNDOS,
-    build_url,
+    SECTORES, TIPOS, URBANIZACIONES, TIPOS_URB,
+    MAX_PAGINAS, MAX_PAGINAS_URB, DELAY_SEGUNDOS,
+    build_url, build_url_urb,
 )
 
 logging.basicConfig(
@@ -389,6 +389,27 @@ def main():
                     except Exception:
                         break
 
+                time.sleep(DELAY_SEGUNDOS)
+
+    # ── Urbanizaciones específicas (casas + departamentos, 1 página) ──
+    log.info("\n=== Scraping por urbanizaciones ===")
+    for sector_key, urbs in URBANIZACIONES.items():
+        sector_nombre = SECTORES.get(sector_key)
+        if not sector_nombre:
+            continue
+        for tipo_slug, tipo_nombre in TIPOS.items():
+            if tipo_slug not in TIPOS_URB:
+                continue
+            for urb_slug in urbs:
+                url = build_url_urb(tipo_slug, sector_key, urb_slug, 1)
+                listings = scrape_pagina(client, url, sector_nombre, tipo_nombre)
+                if not listings:
+                    continue
+                for listing in listings:
+                    procesar_imagen(supabase, listing)
+                guardados = guardar_listings(supabase, listings)
+                total_guardados += guardados
+                log.info(f"  {tipo_nombre} · {sector_nombre} · {urb_slug}: {len(listings)} encontrados, {guardados} guardados")
                 time.sleep(DELAY_SEGUNDOS)
 
     log.info(f"\n=== Scraping completado: {total_guardados} listings guardados ===")
