@@ -332,27 +332,33 @@
         return { data: d || [], filtrosAplicados: habitaciones || banos ? 'ampliados' : 'completos' }
       }
 
-      let data = [], origenLabel = null, filtrosMsg = null
+      let data = [], origenLabel = null
+
       if (urbanizacion) {
-        // Busca en título Y dirección
-        const buscarUrb = (conHab, conParq) => {
-          return baseQuery(conHab, conParq).or(`titulo.ilike.%${urbanizacion}%,direccion.ilike.%${urbanizacion}%`)
+        // 1. Siempre busca la urbanización específica (título O dirección)
+        const buscarUrb = (conHab, conParq) =>
+          baseQuery(conHab, conParq).or(`titulo.ilike.%${urbanizacion}%,direccion.ilike.%${urbanizacion}%`)
+
+        const { data: dUrb, filtrosAplicados: faUrb } = await buscarConRelajacion(buscarUrb)
+        const urbIds = new Set((dUrb || []).map(l => l.id))
+
+        // 2. Si faltan comparables para llegar a 10, completa con el resto del sector
+        let dSec = []
+        if ((dUrb || []).length < 10) {
+          const { data: dSecAll } = await buscarConRelajacion(baseQuery)
+          dSec = (dSecAll || []).filter(l => !urbIds.has(l.id))
         }
-        const { data: dUrb, filtrosAplicados: fa } = await buscarConRelajacion(buscarUrb)
-        if (fa !== 'completos') filtrosMsg = fa
-        if (dUrb && dUrb.length >= 5) {
-          data = dUrb
-          origenLabel = { texto: `${dUrb.length} en ${urbanizacion}${fa !== 'completos' ? ' · filtros ampliados' : ''}`, tipo: 'urb' }
-        } else {
-          const { data: dSec, filtrosAplicados: fa2 } = await buscarConRelajacion(baseQuery)
-          if (fa2 !== 'completos') filtrosMsg = fa2
-          data = dSec || []
-          const n = dUrb ? dUrb.length : 0
-          origenLabel = { texto: n > 0 ? `${n} en ${urbanizacion} · ${data.length} del sector` : `Sin resultados en ${urbanizacion} · ${data.length} del sector`, tipo: 'fallback' }
-        }
+
+        // 3. Urbanización primero, sector al final
+        data = [...(dUrb || []), ...dSec]
+        const nUrb = (dUrb || []).length
+        const nSec = dSec.length
+        origenLabel = nUrb > 0
+          ? { texto: `${nUrb} en ${urbanizacion}${nSec > 0 ? ` + ${nSec} del sector` : ''}${faUrb !== 'completos' ? ' · filtros ampliados' : ''}`, tipo: 'urb' }
+          : { texto: `Sin resultados en ${urbanizacion} · ${nSec} del sector`, tipo: 'fallback' }
+
       } else {
         const { data: dSec, filtrosAplicados: fa } = await buscarConRelajacion(baseQuery)
-        if (fa !== 'completos') filtrosMsg = fa
         data = dSec || []
         if (fa !== 'completos') {
           origenLabel = { texto: `Búsqueda ampliada (sin datos de hab/baños en comparables)`, tipo: 'fallback' }
