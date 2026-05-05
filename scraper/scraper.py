@@ -348,7 +348,7 @@ def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[d
 # Scraping de una URL
 # ---------------------------------------------------------------------------
 
-def scrape_pagina(client: httpx.Client, url: str, sector_nombre: str, tipo_nombre: str) -> list[dict]:
+def scrape_pagina(client: httpx.Client, url: str, sector_nombre: str, tipo_nombre: str, urbanizacion: str | None = None) -> list[dict]:
     log.info(f"  Scrapeando: {url}")
     proxy_url = "https://api.scraperapi.com/"
     params = {"api_key": SCRAPERAPI_KEY, "url": url, "render": "false"}
@@ -366,9 +366,17 @@ def scrape_pagina(client: httpx.Client, url: str, sector_nombre: str, tipo_nombr
     if items_json:
         log.info(f"  JSON Next.js: {len(items_json)} items")
         resultados = [parsear_listing_json(i, sector_nombre, tipo_nombre) for i in items_json]
-        return [r for r in resultados if r]
+        results = [r for r in resultados if r]
+    else:
+        results = parsear_cards_dom(html, sector_nombre, tipo_nombre)
 
-    return parsear_cards_dom(html, sector_nombre, tipo_nombre)
+    # Si venimos de una búsqueda por urbanización, la inyectamos directamente
+    if urbanizacion:
+        for r in results:
+            if not r.get("urbanizacion"):
+                r["urbanizacion"] = urbanizacion
+
+    return results
 
 
 def hay_mas_paginas(html: str) -> bool:
@@ -458,8 +466,9 @@ def main():
                 if tipo_slug not in TIPOS_URB:
                     continue
                 for urb_slug in urbs:
+                    urb_nombre = urb_slug.replace("-", " ").title()
                     url = build_url_urb(tipo_slug, sector_key, urb_slug, 1)
-                    listings = scrape_pagina(client, url, sector_nombre, tipo_nombre)
+                    listings = scrape_pagina(client, url, sector_nombre, tipo_nombre, urb_nombre)
                     if not listings:
                         continue
                     for listing in listings:
