@@ -2,8 +2,13 @@
 ACM Guayaquil — Scraper de Plusvalía.com
 Usa httpx + BeautifulSoup (sin navegador) para máxima compatibilidad.
 Corre automáticamente cada 24h en Render.com.
+
+REQUISITO SUPABASE STORAGE:
+  1. Crear bucket "imagenes" en Supabase → Storage → New bucket
+  2. Activar "Public bucket" al crearlo (o agregar policy SELECT para anon)
 """
 
+import hashlib
 import json
 import logging
 import re
@@ -61,6 +66,68 @@ def parsear_entero(texto: str) -> int | None:
         return None
     m = re.search(r"\d+", texto)
     return int(m.group()) if m else None
+
+
+# ---------------------------------------------------------------------------
+# Imágenes → Supabase Storage
+# ---------------------------------------------------------------------------
+
+_EXT_MAP = {
+    "image/jpeg": ".jpg",
+    "image/jpg":  ".jpg",
+    "image/png":  ".png",
+    "image/webp": ".webp",
+    "image/gif":  ".gif",
+}
+
+
+def descargar_imagen(url: str) -> tuple[bytes, str] | tuple[None, None]:
+    """Descarga imagen directamente (sin proxy) y retorna (bytes, content_type)."""
+    if not url:
+        return None, None
+    try:
+        with httpx.Client(timeout=15, follow_redirects=True) as c:
+            resp = c.get(url)
+        if resp.status_code == 200:
+            ct = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+            return resp.content, ct
+    except Exception as e:
+        log.debug(f"Error descargando imagen {url}: {e}")
+    return None, None
+
+
+def subir_imagen_supabase(supabase_client, imagen_bytes: bytes, nombre: str, content_type: str) -> str | None:
+    """Sube al bucket 'imagenes' y retorna URL pública, o None si falla."""
+    try:
+        supabase_client.storage.from_("imagenes").upload(
+            nombre,
+            imagen_bytes,
+            {"contentType": content_type, "upsert": True},
+        )
+        return f"{SUPABASE_URL}/storage/v1/object/public/imagenes/{nombre}"
+    except Exception as e:
+        log.debug(f"Error subiendo imagen a Supabase Storage: {e}")
+        return None
+
+
+def procesar_imagen(supabase_client, listing: dict) -> None:
+    """Reemplaza imagen_url de Plusvalía CDN por URL de Supabase Storage. Modifica in-place."""
+    url_original = listing.get("imagen_url")
+    if not url_original:
+        return
+    # Si ya es Supabase, nada que hacer (re-runs)
+    if url_original.startswith(SUPABASE_URL):
+        return
+
+    imagen_bytes, content_type = descargar_imagen(url_original)
+    if not imagen_bytes:
+        listing["imagen_url"] = None
+        return
+
+    ext = _EXT_MAP.get(content_type, ".jpg")
+    nombre = hashlib.md5(listing["url_fuente"].encode()).hexdigest() + ext
+    url_publica = subir_imagen_supabase(supabase_client, imagen_bytes, nombre, content_type)
+    listing["imagen_url"] = url_publica  # None si falló la subida
 
 
 # ---------------------------------------------------------------------------
@@ -305,6 +372,9 @@ def main():
                 if not listings:
                     log.info(f"  Página {pagina}: sin resultados")
                     break
+
+                for listing in listings:
+                    procesar_imagen(supabase, listing)
 
                 guardados = guardar_listings(supabase, listings)
                 total_guardados += guardados
