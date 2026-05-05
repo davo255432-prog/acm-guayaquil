@@ -335,21 +335,44 @@
       let data = [], origenLabel = null
 
       if (urbanizacion) {
-        // 1. Siempre busca la urbanización específica (campo urbanizacion, título O dirección)
+        // 1. Busca en DB local (campo urbanizacion, título O dirección)
         const buscarUrb = (conHab, conParq) =>
           baseQuery(conHab, conParq).or(`urbanizacion.ilike.%${urbanizacion}%,titulo.ilike.%${urbanizacion}%,direccion.ilike.%${urbanizacion}%`)
 
-        const { data: dUrb, filtrosAplicados: faUrb } = await buscarConRelajacion(buscarUrb)
+        let { data: dUrb, filtrosAplicados: faUrb } = await buscarConRelajacion(buscarUrb)
+
+        // 2. Si no hay nada en DB → buscar en Plusvalía en tiempo real
+        if (!dUrb || dUrb.length === 0) {
+          mostrarLoader(true)
+          document.getElementById('loader-wrap').querySelector('svg').insertAdjacentHTML('afterend',
+            '<p id="loader-msg" class="text-sm text-gray-500 mt-3">Buscando en Plusvalía en tiempo real…</p>')
+          try {
+            const fnResp = await fetch(
+              `${SUPABASE_URL}/functions/v1/buscar-urbanizacion`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON}` },
+                body: JSON.stringify({ sector, tipo, urbanizacion }),
+              }
+            )
+            const fnData = await fnResp.json()
+            if (fnData.listings && fnData.listings.length > 0) {
+              dUrb = fnData.listings
+              faUrb = 'completos'
+            }
+          } catch (e) { console.warn('Edge Function error:', e) }
+          finally { document.getElementById('loader-msg')?.remove() }
+        }
+
         const urbIds = new Set((dUrb || []).map(l => l.id))
 
-        // 2. Si faltan comparables para llegar a 10, completa con el resto del sector
+        // 3. Completa con el sector si faltan comparables
         let dSec = []
         if ((dUrb || []).length < 10) {
           const { data: dSecAll } = await buscarConRelajacion(baseQuery)
           dSec = (dSecAll || []).filter(l => !urbIds.has(l.id))
         }
 
-        // 3. Urbanización primero, sector al final
         data = [...(dUrb || []), ...dSec]
         const nUrb = (dUrb || []).length
         const nSec = dSec.length
