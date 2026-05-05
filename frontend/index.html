@@ -293,37 +293,70 @@
     ocultarResultados()
 
     try {
-      const baseQuery = () => {
+      // Query base: solo sector + tipo + precio + metraje (siempre se aplican)
+      const baseQuery = (conHab = true, conParq = true) => {
         let q = db.from('listings').select('*')
           .eq('sector', sector).eq('tipo', tipo).eq('activo', true)
           .order('fecha_scrape', { ascending: false }).limit(200)
         if (preMin) q = q.gte('precio', preMin)
         if (preMax) q = q.lte('precio', preMax)
-        if (habitaciones) { if (habitaciones >= 4) q = q.gte('habitaciones', 4); else q = q.eq('habitaciones', habitaciones) }
-        if (banos) { if (banos >= 3) q = q.gte('banos', 3); else q = q.eq('banos', banos) }
-        if (parqueos === '0') q = q.eq('parqueos', 0)
-        else if (parqueos === '1') q = q.eq('parqueos', 1)
-        else if (parqueos === '2') q = q.gte('parqueos', 2)
+        if (conHab) {
+          if (habitaciones) { if (habitaciones >= 4) q = q.gte('habitaciones', 4); else q = q.eq('habitaciones', habitaciones) }
+          if (banos) { if (banos >= 3) q = q.gte('banos', 3); else q = q.eq('banos', banos) }
+        }
+        if (conParq) {
+          if (parqueos === '0') q = q.eq('parqueos', 0)
+          else if (parqueos === '1') q = q.eq('parqueos', 1)
+          else if (parqueos === '2') q = q.gte('parqueos', 2)
+        }
         return q
       }
 
-      let data = [], origenLabel = null
+      // Búsqueda con relajación progresiva de filtros
+      const buscarConRelajacion = async (queryFn) => {
+        // Intento 1: todos los filtros
+        let { data: d, error: e } = await queryFn(true, true)
+        if (e) throw e
+        if (d && d.length >= 5) return { data: d, filtrosAplicados: 'completos' }
+
+        // Intento 2: sin parqueos
+        if (parqueos) {
+          ;({ data: d, error: e } = await queryFn(true, false))
+          if (e) throw e
+          if (d && d.length >= 5) return { data: d, filtrosAplicados: 'sin parqueos' }
+        }
+
+        // Intento 3: solo sector + tipo + precio (sin hab/baños/parqueos)
+        ;({ data: d, error: e } = await queryFn(false, false))
+        if (e) throw e
+        return { data: d || [], filtrosAplicados: habitaciones || banos ? 'ampliados' : 'completos' }
+      }
+
+      let data = [], origenLabel = null, filtrosMsg = null
       if (urbanizacion) {
-        const { data: dUrb, error: eUrb } = await baseQuery().ilike('titulo', `%${urbanizacion}%`)
-        if (eUrb) throw eUrb
+        // Busca en título Y dirección
+        const buscarUrb = (conHab, conParq) => {
+          return baseQuery(conHab, conParq).or(`titulo.ilike.%${urbanizacion}%,direccion.ilike.%${urbanizacion}%`)
+        }
+        const { data: dUrb, filtrosAplicados: fa } = await buscarConRelajacion(buscarUrb)
+        if (fa !== 'completos') filtrosMsg = fa
         if (dUrb && dUrb.length >= 5) {
-          data = dUrb; origenLabel = { texto: `${dUrb.length} en ${urbanizacion}`, tipo: 'urb' }
+          data = dUrb
+          origenLabel = { texto: `${dUrb.length} en ${urbanizacion}${fa !== 'completos' ? ' · filtros ampliados' : ''}`, tipo: 'urb' }
         } else {
-          const { data: dSec, error: eSec } = await baseQuery()
-          if (eSec) throw eSec
+          const { data: dSec, filtrosAplicados: fa2 } = await buscarConRelajacion(baseQuery)
+          if (fa2 !== 'completos') filtrosMsg = fa2
           data = dSec || []
           const n = dUrb ? dUrb.length : 0
           origenLabel = { texto: n > 0 ? `${n} en ${urbanizacion} · ${data.length} del sector` : `Sin resultados en ${urbanizacion} · ${data.length} del sector`, tipo: 'fallback' }
         }
       } else {
-        const { data: dSec, error } = await baseQuery()
-        if (error) throw error
+        const { data: dSec, filtrosAplicados: fa } = await buscarConRelajacion(baseQuery)
+        if (fa !== 'completos') filtrosMsg = fa
         data = dSec || []
+        if (fa !== 'completos') {
+          origenLabel = { texto: `Búsqueda ampliada (sin datos de hab/baños en comparables)`, tipo: 'fallback' }
+        }
       }
 
       _listings = data; _sector = sector; _tipo = tipo; _urb = urbanizacion
