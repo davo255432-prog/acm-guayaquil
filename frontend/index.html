@@ -335,9 +335,9 @@
       let data = [], origenLabel = null
 
       if (urbanizacion) {
-        // 1. Siempre busca la urbanización específica (título O dirección)
+        // 1. Siempre busca la urbanización específica (campo urbanizacion, título O dirección)
         const buscarUrb = (conHab, conParq) =>
-          baseQuery(conHab, conParq).or(`titulo.ilike.%${urbanizacion}%,direccion.ilike.%${urbanizacion}%`)
+          baseQuery(conHab, conParq).or(`urbanizacion.ilike.%${urbanizacion}%,titulo.ilike.%${urbanizacion}%,direccion.ilike.%${urbanizacion}%`)
 
         const { data: dUrb, filtrosAplicados: faUrb } = await buscarConRelajacion(buscarUrb)
         const urbIds = new Set((dUrb || []).map(l => l.id))

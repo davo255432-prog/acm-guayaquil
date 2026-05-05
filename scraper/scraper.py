@@ -131,6 +131,57 @@ def procesar_imagen(supabase_client, listing: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Extracción de urbanización
+# ---------------------------------------------------------------------------
+
+_STOP_WORDS = {
+    "casa", "departamento", "oficina", "terreno", "local", "consultorio",
+    "venta", "alquiler", "renta", "vendo", "arriendo", "propiedad",
+    "de", "en", "la", "el", "los", "las", "un", "una", "con", "por",
+    "del", "al", "y", "e", "o", "a", "se", "km",
+    "guayaquil", "guayas", "ecuador", "samborondon", "puntilla",
+    "norte", "ceibos", "costa", "salitre", "narcisa", "jesus", "leon",
+    "febres", "cordero", "via",
+}
+
+
+def extraer_urbanizacion_json(item: dict, sector_nombre: str) -> str | None:
+    loc = item.get("location") or {}
+
+    # Método 1: subdivisions (estructura ZonaProp/Navent)
+    for s in (loc.get("subdivisions") or []):
+        tipo = (s.get("type") or "").upper()
+        label = (s.get("label") or "").strip()
+        if tipo in ("NEIGHBORHOOD", "URBANIZATION", "SUBDIVISION", "BARRIO") and label:
+            if label.lower() not in (sector_nombre.lower(), "guayaquil", "guayas"):
+                return label
+
+    # Método 2: full_location → "Villa Club, Samborondón, Guayas"
+    full = (loc.get("full_location") or loc.get("full_address") or "").strip()
+    if full:
+        parts = [p.strip() for p in full.split(",")]
+        if parts and parts[0].lower() not in (sector_nombre.lower(), "guayaquil", "guayas"):
+            return parts[0]
+
+    return None
+
+
+def extraer_urbanizacion_url(url: str, sector_nombre: str) -> str | None:
+    m = re.search(r'/propiedades/(.+?)(?:-\d{5,})?(?:\.html)?$', url)
+    if not m:
+        return None
+    slug = m.group(1)
+    stop = _STOP_WORDS | {w.lower() for w in sector_nombre.split()}
+    words = [w for w in slug.split("-") if w and w not in stop and not w.isdigit()]
+    if len(words) >= 2:
+        candidato = " ".join(w.capitalize() for w in words[:4])
+        # Descartar si parece descripción genérica (más de 4 palabras distintas)
+        if len(words) <= 5:
+            return candidato
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Extracción desde JSON de Next.js (__NEXT_DATA__)
 # ---------------------------------------------------------------------------
 
@@ -178,19 +229,24 @@ def parsear_listing_json(item: dict, sector_nombre: str, tipo_nombre: str) -> di
         precio = float(precio_raw) if precio_raw else None
         area   = float(area_raw)   if area_raw   else None
 
+        urb = (
+            extraer_urbanizacion_json(item, sector_nombre) or
+            extraer_urbanizacion_url(url, sector_nombre)
+        )
         return {
-            "sector":       sector_nombre,
-            "tipo":         tipo_nombre,
-            "precio":       precio,
-            "area_m2":      area,
-            "precio_m2":    round(precio / area, 2) if precio and area else None,
-            "habitaciones": parsear_entero(str(item.get("rooms", "") or item.get("bedrooms", ""))),
-            "banos":        parsear_entero(str(item.get("bathrooms", "") or item.get("banos", ""))),
-            "parqueos":     parsear_entero(str(item.get("parking", "") or item.get("garages", ""))),
-            "titulo":       str(item.get("title") or item.get("titulo") or "")[:500],
-            "direccion":    str(item.get("address") or (item.get("location") or {}).get("label") or "")[:300],
-            "url_fuente":   url,
-            "imagen_url":   (str(item.get("photos", [{}])[0].get("url")) if item.get("photos") else None),
+            "sector":        sector_nombre,
+            "tipo":          tipo_nombre,
+            "precio":        precio,
+            "area_m2":       area,
+            "precio_m2":     round(precio / area, 2) if precio and area else None,
+            "habitaciones":  parsear_entero(str(item.get("rooms", "") or item.get("bedrooms", ""))),
+            "banos":         parsear_entero(str(item.get("bathrooms", "") or item.get("banos", ""))),
+            "parqueos":      parsear_entero(str(item.get("parking", "") or item.get("garages", ""))),
+            "titulo":        str(item.get("title") or item.get("titulo") or "")[:500],
+            "direccion":     str(item.get("address") or (item.get("location") or {}).get("label") or "")[:300],
+            "url_fuente":    url,
+            "imagen_url":    (str(item.get("photos", [{}])[0].get("url")) if item.get("photos") else None),
+            "urbanizacion":  urb[:200] if urb else None,
         }
     except Exception as e:
         log.debug(f"Error parseando item JSON: {e}")
@@ -268,18 +324,19 @@ def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[d
                 parq = int(m.group(1))
 
             resultados.append({
-                "sector":       sector_nombre,
-                "tipo":         tipo_nombre,
-                "precio":       precio,
-                "area_m2":      area,
-                "precio_m2":    round(precio / area, 2) if precio and area else None,
-                "habitaciones": hab,
-                "banos":        banos,
-                "parqueos":     parq,
-                "titulo":       titulo,
-                "direccion":    direccion,
-                "url_fuente":   url,
-                "imagen_url":   imagen_url[:500] or None,
+                "sector":        sector_nombre,
+                "tipo":          tipo_nombre,
+                "precio":        precio,
+                "area_m2":       area,
+                "precio_m2":     round(precio / area, 2) if precio and area else None,
+                "habitaciones":  hab,
+                "banos":         banos,
+                "parqueos":      parq,
+                "titulo":        titulo,
+                "direccion":     direccion,
+                "url_fuente":    url,
+                "imagen_url":    imagen_url[:500] or None,
+                "urbanizacion":  extraer_urbanizacion_url(url, sector_nombre),
             })
         except Exception as e:
             log.debug(f"Error parseando card: {e}")
