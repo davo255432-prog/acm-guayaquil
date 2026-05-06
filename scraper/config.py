@@ -66,6 +66,8 @@ URBANIZACIONES = {
     "q-leon-febres-cordero": [
         "la-joya", "volare", "villa-club", "guayacanes",
         "alborada", "los-vergeles", "miraflores", "brisas-del-norte",
+        "la-rioja", "la-gran-victoria", "el-condado", "vicolinci",
+        "vistana", "portón-del-rio", "la-aurora",
     ],
     "q-narcisa-de-jesus": [
         "metropolis", "ciudad-del-rio", "la-perla",
