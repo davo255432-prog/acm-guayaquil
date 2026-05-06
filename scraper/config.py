@@ -76,6 +76,11 @@ URBANIZACIONES = {
     ],
     "q-via-a-salitre": [
         "las-orquideas", "los-almendros", "villa-hermosa",
+        "la-gran-victoria", "la-rioja", "savali", "mallorca-village",
+        "arboletta", "los-pinos-del-rio", "santa-maria-casa-grande",
+        "ciudad-del-sol", "parques-del-sol", "los-rosales",
+        "villa-del-rey", "la-campiña", "san-jose-del-rio",
+        "los-jardines", "portal-del-rio", "los-cerezos",
     ],
 }
 
