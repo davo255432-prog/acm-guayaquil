@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 from supabase import create_client
 
 from config import (
-    SUPABASE_URL, SUPABASE_KEY, SCRAPERAPI_KEY,
+    SUPABASE_URL, SUPABASE_KEY,
     SECTORES, TIPOS, URBANIZACIONES, TIPOS_URB,
     MAX_PAGINAS, MAX_PAGINAS_URB, DELAY_SEGUNDOS,
     build_url, build_url_urb,
@@ -213,6 +213,7 @@ def parsear_listing_json(item: dict, sector_nombre: str, tipo_nombre: str) -> di
             return None
         if not url.startswith("http"):
             url = "https://www.plusvalia.com" + url
+        url = url.split("?")[0]  # quitar parámetros de tracking
 
         precio_raw = (
             item.get("price") or
@@ -290,6 +291,7 @@ def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[d
             url = link["href"]
             if not url.startswith("http"):
                 url = "https://www.plusvalia.com" + url
+            url = url.split("?")[0]  # quitar parámetros de tracking
 
             texto = card.get_text(" ", strip=True)
 

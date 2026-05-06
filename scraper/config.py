@@ -1,8 +1,7 @@
 import os
 
-SUPABASE_URL    = os.environ["SUPABASE_URL"]
-SUPABASE_KEY    = os.environ["SUPABASE_KEY"]
-SCRAPERAPI_KEY  = os.environ["SCRAPERAPI_KEY"]
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
 BASE_URL = "https://www.plusvalia.com/venta"
 
@@ -43,7 +42,9 @@ URBANIZACIONES = {
     "samborondon": [
         "villa-club", "volare", "la-joya", "la-rioja", "terrasol",
         "ciudad-celeste", "aires-del-batan", "parques-del-rio",
-        "savali", "isla-mocoli", "boreal",
+        "savali", "isla-mocoli", "boreal", "la-gran-victoria",
+        "punta-barranca", "blue-bay", "guayaquil-tenis-club",
+        "isla-celeste", "bouganville", "estancias-del-rio",
     ],
     "la-puntilla": [
         "ciudad-celeste", "isla-celeste", "los-lagos", "entre-rios",
