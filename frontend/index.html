@@ -368,7 +368,7 @@
 
         // 3. Completa con el sector si faltan comparables
         let dSec = []
-        if ((dUrb || []).length < 10) {
+        if ((dUrb || []).length < 4) {
           const { data: dSecAll } = await buscarConRelajacion(baseQuery)
           dSec = (dSecAll || []).filter(l => !urbIds.has(l.id))
         }
@@ -456,7 +456,7 @@
         ${l.imagen_url ? `<img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block" onerror="this.style.display='none'" />` : ''}
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-gray-800 text-sm truncate">${l.titulo || tipo + ' en ' + sector}</p>
-          <p class="text-xs text-gray-500 mt-0.5 truncate">${l.direccion || sector}</p>
+          <p class="text-xs text-gray-500 mt-0.5 truncate">${(l.urbanizacion ? l.urbanizacion + ' · ' : '') + (l.sector || sector)}</p>
           <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 items-center">
             ${l.precio    ? `<span class="font-bold text-brand text-sm">${fmt.format(l.precio)}</span>` : ''}
             ${l.area_m2   ? `<span>${fmtN(l.area_m2)} m²</span>` : ''}
@@ -869,7 +869,7 @@ Tel: ${AGENTE.telefono}
               </td>
               <td style="padding:3mm 2.5mm;">
                 <p style="margin:0;font-weight:700;color:#111827;line-height:1.3;font-size:7.5pt;">${(l.titulo||_tipo+' en '+_sector).slice(0,50)}${(l.titulo||'').length>50?'…':''}</p>
-                <p style="margin:1mm 0 0;color:#9ca3af;font-size:6.5pt;">${l.direccion||_sector}</p>
+                <p style="margin:1mm 0 0;color:#9ca3af;font-size:6.5pt;">${(l.urbanizacion ? l.urbanizacion + ' · ' : '') + (l.sector || _sector)}</p>
               </td>
               <td style="padding:3mm 2.5mm;text-align:right;font-weight:800;color:${_NAV};font-size:8pt;">${l.precio?fmt.format(l.precio):'—'}</td>
               <td style="padding:3mm 2.5mm;text-align:right;color:#374151;">${l.area_m2?fmtN(l.area_m2):'—'}</td>
@@ -915,7 +915,7 @@ Tel: ${AGENTE.telefono}
             </div>
             <p style="font-size:8.5pt;font-weight:700;color:${_NAV};margin:0;line-height:1.3;">${(l.titulo||_tipo+' en '+_sector).slice(0,62)}${(l.titulo||'').length>62?'…':''}</p>
           </div>
-          <p style="font-size:7pt;color:#9ca3af;margin:0 0 3mm 0;">${l.direccion||_sector}</p>
+          <p style="font-size:7pt;color:#9ca3af;margin:0 0 3mm 0;">${(l.urbanizacion ? l.urbanizacion + ' · ' : '') + (l.sector || _sector)}</p>
           <div style="background:#f9fafb;border-left:2.5px solid ${_GOLD};padding:2.5mm 3.5mm;margin-bottom:3mm;">
             <p style="font-size:6pt;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:0 0 .5mm 0;">Precio de publicación</p>
             <p style="font-size:13pt;font-weight:900;color:${_NAV};margin:0;line-height:1;">${l.precio?fmt.format(l.precio):'—'}</p>
