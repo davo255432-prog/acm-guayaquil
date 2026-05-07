@@ -15,7 +15,7 @@ import re
 import time
 
 import httpx
-from curl_cffi import requests as cffi_requests
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 from supabase import create_client
 
@@ -133,7 +133,7 @@ def procesar_imagen(supabase_client, listing: dict) -> None:
 
     imagen_bytes, content_type = descargar_imagen(url_original)
     if not imagen_bytes:
-        listing["imagen_url"] = None
+        # Mantener URL original de naventcdn — el PDF la carga directo sin CORS
         return
 
     ext = _EXT_MAP.get(content_type, ".jpg")
@@ -362,14 +362,15 @@ def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[d
 # Scraping de una URL
 # ---------------------------------------------------------------------------
 
-def scrape_pagina(client, url: str, sector_nombre: str, tipo_nombre: str, urbanizacion: str | None = None) -> list[dict]:
+def scrape_pagina(page, url: str, sector_nombre: str, tipo_nombre: str, urbanizacion: str | None = None) -> list[dict]:
     log.info(f"  Scrapeando: {url}")
     try:
-        resp = client.get(url, timeout=60)
-        if resp.status_code != 200:
-            log.warning(f"  HTTP {resp.status_code} en {url}")
-            return []
-        html = resp.text
+        page.goto(url, timeout=60_000, wait_until="domcontentloaded")
+        try:
+            page.wait_for_selector("script#__NEXT_DATA__", timeout=15_000)
+        except Exception:
+            log.warning(f"  Sin __NEXT_DATA__ en {url} (posible challenge)")
+        html = page.content()
     except Exception as e:
         log.warning(f"  Error al cargar {url}: {e}")
         return []
@@ -436,7 +437,11 @@ def main():
     combinaciones = [(t, s) for t in TIPOS for s in SECTORES]
     log.info(f"Combinaciones: {len(combinaciones)} ({len(TIPOS)} tipos × {len(SECTORES)} sectores)")
 
-    with cffi_requests.Session(impersonate="chrome136") as client:
+    with sync_playwright() as pw:
+        browser = pw.chromium.connect_over_cdp("http://localhost:9222")
+        context = browser.contexts[0] if browser.contexts else browser.new_context()
+        page = context.new_page()
+
         for tipo_slug, sector_key in combinaciones:
             tipo_nombre   = TIPOS[tipo_slug]
             sector_nombre = SECTORES[sector_key]
@@ -444,7 +449,7 @@ def main():
 
             for pagina in range(1, MAX_PAGINAS + 1):
                 url = build_url(tipo_slug, sector_key, pagina)
-                listings = scrape_pagina(client, url, sector_nombre, tipo_nombre)
+                listings = scrape_pagina(page, url, sector_nombre, tipo_nombre)
 
                 if not listings:
                     log.info(f"  Página {pagina}: sin resultados")
@@ -456,15 +461,6 @@ def main():
                 guardados = guardar_listings(supabase, listings)
                 total_guardados += guardados
                 log.info(f"  Página {pagina}: {len(listings)} encontrados, {guardados} guardados")
-
-                if pagina < MAX_PAGINAS:
-                    try:
-                        resp = client.get(url, timeout=30, follow_redirects=True)
-                        if not hay_mas_paginas(resp.text):
-                            log.info("  No hay más páginas")
-                            break
-                    except Exception:
-                        break
 
                 time.sleep(DELAY_SEGUNDOS)
 
@@ -480,7 +476,7 @@ def main():
                 for urb_slug in urbs:
                     urb_nombre = urb_slug.replace("-", " ").title()
                     url = build_url_urb(tipo_slug, sector_key, urb_slug, 1)
-                    listings = scrape_pagina(client, url, sector_nombre, tipo_nombre, urb_nombre)
+                    listings = scrape_pagina(page, url, sector_nombre, tipo_nombre, urb_nombre)
                     if not listings:
                         continue
                     for listing in listings:
@@ -489,6 +485,8 @@ def main():
                     total_guardados += guardados
                     log.info(f"  {tipo_nombre} · {sector_nombre} · {urb_slug}: {len(listings)} encontrados, {guardados} guardados")
                     time.sleep(DELAY_SEGUNDOS)
+
+        page.close()
 
     log.info(f"\n=== Scraping completado: {total_guardados} listings guardados ===")
 
