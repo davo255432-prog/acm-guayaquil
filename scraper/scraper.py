@@ -15,6 +15,7 @@ import re
 import time
 
 import httpx
+from curl_cffi import requests as cffi_requests
 from bs4 import BeautifulSoup
 from supabase import create_client
 
@@ -36,10 +37,21 @@ HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
+        "Chrome/136.0.0.0 Safari/537.36"
     ),
-    "Accept-Language": "es-EC,es;q=0.9",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "es-EC,es;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-site": "none",
+    "sec-fetch-user": "?1",
+    "upgrade-insecure-requests": "1",
+    "cache-control": "max-age=0",
+    "connection": "keep-alive",
 }
 
 
@@ -350,10 +362,10 @@ def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[d
 # Scraping de una URL
 # ---------------------------------------------------------------------------
 
-def scrape_pagina(client: httpx.Client, url: str, sector_nombre: str, tipo_nombre: str, urbanizacion: str | None = None) -> list[dict]:
+def scrape_pagina(client, url: str, sector_nombre: str, tipo_nombre: str, urbanizacion: str | None = None) -> list[dict]:
     log.info(f"  Scrapeando: {url}")
     try:
-        resp = client.get(url, timeout=60, follow_redirects=True)
+        resp = client.get(url, timeout=60)
         if resp.status_code != 200:
             log.warning(f"  HTTP {resp.status_code} en {url}")
             return []
@@ -424,7 +436,7 @@ def main():
     combinaciones = [(t, s) for t in TIPOS for s in SECTORES]
     log.info(f"Combinaciones: {len(combinaciones)} ({len(TIPOS)} tipos × {len(SECTORES)} sectores)")
 
-    with httpx.Client(headers=HEADERS) as client:
+    with cffi_requests.Session(impersonate="chrome136") as client:
         for tipo_slug, sector_key in combinaciones:
             tipo_nombre   = TIPOS[tipo_slug]
             sector_nombre = SECTORES[sector_key]
