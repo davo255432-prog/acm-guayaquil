@@ -416,9 +416,40 @@ def guardar_listings(supabase_client, listings: list[dict]) -> int:
 # Loop principal
 # ---------------------------------------------------------------------------
 
+def migrar_imagenes_existentes(supabase_client) -> None:
+    """Sube a Storage las imágenes de listings ya guardados con URLs de CDN externo."""
+    log.info("=== Migrando imágenes existentes a Supabase Storage ===")
+    pagina = 0
+    limite = 100
+    migradas = 0
+    while True:
+        resp = supabase_client.table("listings") \
+            .select("id,url_fuente,imagen_url") \
+            .not_.like("imagen_url", f"{SUPABASE_URL}%") \
+            .not_.is_("imagen_url", "null") \
+            .range(pagina * limite, (pagina + 1) * limite - 1) \
+            .execute()
+        rows = resp.data or []
+        if not rows:
+            break
+        for row in rows:
+            listing = {"url_fuente": row["url_fuente"], "imagen_url": row["imagen_url"]}
+            procesar_imagen(supabase_client, listing)
+            if listing["imagen_url"] and listing["imagen_url"].startswith(SUPABASE_URL):
+                supabase_client.table("listings") \
+                    .update({"imagen_url": listing["imagen_url"]}) \
+                    .eq("id", row["id"]) \
+                    .execute()
+                migradas += 1
+        log.info(f"  Página {pagina}: {len(rows)} procesados, {migradas} migradas total")
+        pagina += 1
+    log.info(f"=== Migración completada: {migradas} imágenes subidas ===")
+
+
 def main():
     log.info("=== ACM Guayaquil — Scraper iniciado ===")
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    migrar_imagenes_existentes(supabase)
 
     total_guardados = 0
     combinaciones = [(t, s) for t in TIPOS for s in SECTORES]
