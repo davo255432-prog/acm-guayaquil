@@ -498,20 +498,38 @@
     await Promise.allSettled(
       Array.from(reportEl.querySelectorAll('img[src^="http"]')).map(img =>
         new Promise(resolve => {
-          const tmp = new Image()
-          tmp.crossOrigin = 'anonymous'
-          tmp.onload = () => {
-            try {
-              const cv = document.createElement('canvas')
-              cv.width = tmp.naturalWidth; cv.height = tmp.naturalHeight
-              cv.getContext('2d').drawImage(tmp, 0, 0)
-              img.src = cv.toDataURL('image/jpeg', 0.85)
-            } catch {}
+          const original = img.src
+          const mostrarPlaceholder = () => {
+            img.style.display = 'none'
+            if (img.nextElementSibling) img.nextElementSibling.style.display = 'flex'
             resolve()
           }
-          tmp.onerror = resolve
-          setTimeout(resolve, 6000)
-          tmp.src = img.src
+          // Intentar via fetch (evita restricción de canvas tainted)
+          fetch(original, { mode: 'cors' })
+            .then(r => r.blob())
+            .then(blob => new Promise((res, rej) => {
+              const reader = new FileReader()
+              reader.onload = () => { img.src = reader.result; resolve() }
+              reader.onerror = rej
+              reader.readAsDataURL(blob)
+            }))
+            .catch(() => {
+              // Fallback: canvas con crossOrigin
+              const tmp = new Image()
+              tmp.crossOrigin = 'anonymous'
+              tmp.onload = () => {
+                try {
+                  const cv = document.createElement('canvas')
+                  cv.width = tmp.naturalWidth; cv.height = tmp.naturalHeight
+                  cv.getContext('2d').drawImage(tmp, 0, 0)
+                  img.src = cv.toDataURL('image/jpeg', 0.85)
+                  resolve()
+                } catch { mostrarPlaceholder() }
+              }
+              tmp.onerror = mostrarPlaceholder
+              setTimeout(mostrarPlaceholder, 5000)
+              tmp.src = original
+            })
         })
       )
     )
