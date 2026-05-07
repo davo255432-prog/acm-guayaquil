@@ -92,7 +92,7 @@ def descargar_imagen(url: str) -> tuple[bytes, str] | tuple[None, None]:
             ct = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
             return resp.content, ct
     except Exception as e:
-        log.debug(f"Error descargando imagen {url}: {e}")
+        log.error(f"Error descargando imagen {url}: {e}")
     return None, None
 
 
@@ -106,7 +106,7 @@ def subir_imagen_supabase(supabase_client, imagen_bytes: bytes, nombre: str, con
         )
         return f"{SUPABASE_URL}/storage/v1/object/public/imagenes/{nombre}"
     except Exception as e:
-        log.debug(f"Error subiendo imagen a Supabase Storage: {e}")
+        log.error(f"Error subiendo imagen a Supabase Storage: {e}")
         return None
 
 
