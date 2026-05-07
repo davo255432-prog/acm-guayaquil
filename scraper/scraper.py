@@ -425,12 +425,12 @@ def migrar_imagenes_existentes(supabase_client) -> None:
     while True:
         resp = supabase_client.table("listings") \
             .select("id,url_fuente,imagen_url") \
-            .not_.like("imagen_url", f"{SUPABASE_URL}%") \
-            .not_.is_("imagen_url", "null") \
+            .not_("imagen_url", "is", "null") \
             .range(pagina * limite, (pagina + 1) * limite - 1) \
             .execute()
-        rows = resp.data or []
+        rows = [r for r in (resp.data or []) if not r["imagen_url"].startswith(SUPABASE_URL)]
         if not rows:
+            log.info(f"  Sin más imágenes para migrar (página {pagina})")
             break
         for row in rows:
             listing = {"url_fuente": row["url_fuente"], "imagen_url": row["imagen_url"]}
