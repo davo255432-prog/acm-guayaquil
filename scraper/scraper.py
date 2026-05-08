@@ -370,6 +370,11 @@ def scrape_pagina(page, url: str, sector_nombre: str, tipo_nombre: str, urbaniza
             page.wait_for_selector("script#__NEXT_DATA__", timeout=15_000)
         except Exception:
             log.warning(f"  Sin __NEXT_DATA__ en {url} (posible challenge)")
+        # Scroll para activar lazy loading de imágenes
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        page.wait_for_timeout(1500)
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(500)
         html = page.content()
     except Exception as e:
         log.warning(f"  Error al cargar {url}: {e}")
