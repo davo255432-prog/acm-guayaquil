@@ -323,8 +323,15 @@ def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[d
             dir_el = card.find(attrs={"data-qa": "POSTING_CARD_LOCATION"})
             direccion = dir_el.get_text(strip=True)[:300] if dir_el else ""
 
-            img = card.find("img")
-            imagen_url = (img.get("src") or img.get("data-src") or "") if img else ""
+            imagen_url = ""
+            for img in card.find_all("img"):
+                for attr in ["src", "data-src", "data-lazy-src"]:
+                    val = img.get(attr, "")
+                    if "naventcdn" in val or "plusvalia" in val:
+                        imagen_url = val.split(" ")[0]
+                        break
+                if imagen_url:
+                    break
 
             hab = banos = parq = None
             m = re.search(r"(\d+)\s*(?:dorm|hab|recám)", texto, re.I)
