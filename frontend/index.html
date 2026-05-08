@@ -906,7 +906,7 @@ Tel: ${AGENTE.telefono}
     return `<div class="rpt-card" style="border:1px solid #e5e7eb;border-radius:3mm;overflow:hidden;">
       <div style="display:grid;grid-template-columns:58mm 1fr;">
         ${l.imagen_url
-          ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(l.imagen_url)}&w=220&h=175&fit=cover" style="width:58mm;height:46mm;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div style="display:none;width:58mm;height:46mm;background:#f1f5f9;align-items:center;justify-content:center;"><span style="color:#cbd5e1;font-size:24pt;">⌂</span></div>`
+          ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(l.imagen_url.split('?')[0])}&w=220&h=175&fit=cover" style="width:58mm;height:46mm;object-fit:cover;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div style="display:none;width:58mm;height:46mm;background:#f1f5f9;align-items:center;justify-content:center;"><span style="color:#cbd5e1;font-size:24pt;">⌂</span></div>`
           : `<div style="width:58mm;height:46mm;background:#f1f5f9;display:flex;align-items:center;justify-content:center;"><span style="color:#cbd5e1;font-size:24pt;">⌂</span></div>`}
         <div style="padding:4mm 5mm;">
           <div style="display:flex;align-items:flex-start;gap:2.5mm;margin-bottom:2.5mm;">
