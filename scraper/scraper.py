@@ -122,24 +122,42 @@ def subir_imagen_supabase(supabase_client, imagen_bytes: bytes, nombre: str, con
         return None
 
 
-def procesar_imagen(supabase_client, listing: dict) -> None:
-    """Reemplaza imagen_url de Plusvalía CDN por URL de Supabase Storage. Modifica in-place."""
+def procesar_imagen(supabase_client, listing: dict, pw_request=None) -> None:
+    """Descarga imagen con sesión Playwright (Referer: plusvalia.com) y sube a Supabase Storage."""
     url_original = listing.get("imagen_url")
     if not url_original:
         return
-    # Si ya es Supabase, nada que hacer (re-runs)
     if url_original.startswith(SUPABASE_URL):
         return
 
-    imagen_bytes, content_type = descargar_imagen(url_original)
+    imagen_bytes, content_type = None, None
+
+    # Intentar con Playwright (tiene cookies/sesión de Plusvalía — naventcdn lo acepta)
+    if pw_request:
+        try:
+            resp = pw_request.get(
+                url_original,
+                headers={"Referer": "https://www.plusvalia.com/"},
+                timeout=15_000,
+            )
+            if resp.status == 200:
+                ct = resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+                imagen_bytes, content_type = resp.body(), ct
+        except Exception as e:
+            log.error(f"Error descargando imagen con Playwright {url_original}: {e}")
+
+    # Fallback: httpx directo
     if not imagen_bytes:
-        # Mantener URL original de naventcdn — el PDF la carga directo sin CORS
-        return
+        imagen_bytes, content_type = descargar_imagen(url_original)
+
+    if not imagen_bytes:
+        return  # Mantener URL original
 
     ext = _EXT_MAP.get(content_type, ".jpg")
     nombre = hashlib.md5(listing["url_fuente"].encode()).hexdigest() + ext
     url_publica = subir_imagen_supabase(supabase_client, imagen_bytes, nombre, content_type)
-    listing["imagen_url"] = url_publica  # None si falló la subida
+    if url_publica:
+        listing["imagen_url"] = url_publica
 
 
 # ---------------------------------------------------------------------------
@@ -468,7 +486,7 @@ def main():
                     break
 
                 for listing in listings:
-                    procesar_imagen(supabase, listing)
+                    procesar_imagen(supabase, listing, page.request)
 
                 guardados = guardar_listings(supabase, listings)
                 total_guardados += guardados
