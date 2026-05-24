@@ -1080,6 +1080,53 @@
         }
 
         data = [...dUrb, ...dVec]
+
+        // ── MOTOR ACM v2: Scoring, Ajustes Técnicos, Clasificación ──
+        if (data.length > 0 && (areaCons || banos || habitaciones)) {
+          const fichaMotor = {
+            areaCons, areaTotal,
+            habitaciones,
+            banos:    banos    ? parseInt(banos)    : null,
+            parqueos: parqueos ? parseInt(parqueos) : null,
+            urb:      normUrb(urbanizacion),
+            subzona,
+          }
+          data.forEach(comp => {
+            // Filtro duro A: construcción >35% fuera de rango → techo
+            const cC = getCompCons(comp)
+            if (areaCons && cC) {
+              const delta = Math.abs(cC - areaCons) / areaCons
+              if (delta > 0.35) {
+                comp._clasificacion = 'techo'
+                comp._motivoTecho   = `m² construcción fuera de rango (${Math.round(delta*100)}% diferencia)`
+                return
+              }
+            }
+            // Filtro duro B: baños >+1 respecto al sujeto → techo
+            const banosInt = parseInt(banos) || 0
+            if (banosInt && comp.banos && comp.banos > banosInt + 1) {
+              comp._clasificacion = 'techo'
+              comp._motivoTecho   = `Baños muy superiores (${comp.banos} vs ${banosInt} del sujeto)`
+              return
+            }
+            // Scoring
+            comp._score = calcScore(comp, fichaMotor)
+            // Ajustes técnicos
+            const { reclasificar } = calcAjustes(comp, fichaMotor)
+            // Clasificación final
+            if (reclasificar) {
+              comp._clasificacion = 'techo'
+              comp._motivoTecho   = `Ajuste total >20% — comparable superior al sujeto`
+            } else if (comp._score >= 85) comp._clasificacion = 'fuerte'
+            else if  (comp._score >= 70)  comp._clasificacion = 'aceptable'
+            else if  (comp._score >= 55)  comp._clasificacion = 'debil'
+            else {
+              comp._clasificacion = 'techo'
+              comp._motivoTecho   = `Score insuficiente (${comp._score}/100)`
+            }
+          })
+        }
+
         const nUrb = dUrb.length, nVec = dVec.length, nSec = 0
         const total = data.length
         const ampliado = faUrb !== 'completos' ? ' · filtros ampliados' : ''
@@ -1137,11 +1184,37 @@
       badge.classList.remove('hidden')
     } else { badge.classList.add('hidden') }
 
+    // Banner de confiabilidad
+    const confEl = document.getElementById('conf-banner') || (() => {
+      const el = document.createElement('div')
+      el.id = 'conf-banner'
+      document.getElementById('stats-grid').parentNode.insertBefore(el, document.getElementById('stats-grid'))
+      return el
+    })()
+    if (_stats.confiabilidad) {
+      const col = _stats.colorConf || '#b45309'
+      const bg  = _stats.nFuertes >= 2 ? '#f0fdf4' : _stats.nFuertes >= 1 ? '#fefce8' : '#fff7ed'
+      const bc  = _stats.nFuertes >= 2 ? '#bbf7d0' : _stats.nFuertes >= 1 ? '#fde68a' : '#fed7aa'
+      confEl.className = 'mb-4 rounded-xl px-4 py-3 flex items-center gap-3 text-sm border'
+      confEl.style.cssText = `background:${bg};border-color:${bc};`
+      confEl.innerHTML = `
+        <span style="font-size:18px;">
+          ${_stats.nFuertes >= 2 ? '🟢' : _stats.nFuertes >= 1 ? '🟡' : _stats.nAceptables >= 2 ? '🟡' : '🟠'}
+        </span>
+        <div class="flex-1">
+          <span style="font-weight:700;color:${col};">Confiabilidad ${_stats.confiabilidad}</span>
+          <span class="text-gray-500 text-xs ml-2">${_stats.nFuertes || 0} comparables fuertes · ${_stats.nAceptables || 0} aceptables${_stats.nTechos ? ` · ${_stats.nTechos} como techo` : ''}</span>
+        </div>
+        <span class="text-xs text-gray-400 hidden sm:block">${_stats.metodo}</span>`
+    } else {
+      confEl.innerHTML = ''
+    }
+
     document.getElementById('stats-grid').innerHTML = [
       { label: 'Precio promedio', valor: avg ? fmt.format(avg) : '—' },
       { label: 'Precio mínimo',   valor: mn  ? fmt.format(mn)  : '—' },
       { label: 'Precio máximo',   valor: mx  ? fmt.format(mx)  : '—' },
-      { label: 'Promedio USD/m²', valor: avgM2 ? fmtM2(avgM2) : '—' },
+      { label: 'USD/m² ajustado', valor: avgM2 ? fmtM2(avgM2) : '—' },
     ].map(s => `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4"><p class="text-xs text-gray-500 mb-1">${s.label}</p><p class="text-xl font-bold text-gray-800">${s.valor}</p></div>`).join('')
 
     const estWrap = document.getElementById('estimacion-wrap')
@@ -1198,27 +1271,66 @@
       }
     }
     lista.innerHTML = listings.slice(0, 50).map(l => {
-      const esVecina = l._origen === 'vecina'
-      const urbLabel = l.urbanizacion || ''
-      const badge = esVecina
+      const esVecina  = l._origen === 'vecina'
+      const esTecho   = l._clasificacion === 'techo'
+      const urbLabel  = l.urbanizacion || ''
+
+      // Badge de origen (vecina)
+      const badgeVecina = esVecina && !esTecho
         ? `<span style="display:inline-block;margin-bottom:3px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;background:#fff3cd;color:#b45309;border:1px solid #fcd34d;">📍 Referencia · ${urbLabel}</span>`
         : ''
-      const bordeStyle = esVecina ? 'border-color:#fcd34d;border-width:1.5px;' : ''
+
+      // Badge de clasificación ACM
+      const scoreCfg = {
+        fuerte:    { bg:'#dcfce7', col:'#15803d', label:'★ Fuerte'    },
+        aceptable: { bg:'#fef9c3', col:'#854d0e', label:'✓ Aceptable' },
+        debil:     { bg:'#ffedd5', col:'#c2410c', label:'⚡ Débil'    },
+        techo:     { bg:'#f3f4f6', col:'#6b7280', label:'↑ Techo'     },
+      }
+      const cfg = scoreCfg[l._clasificacion]
+      const badgeScore = cfg
+        ? `<span style="display:inline-block;margin-bottom:3px;margin-left:4px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;background:${cfg.bg};color:${cfg.col};">${cfg.label}${l._score ? ` ${l._score}/100` : ''}</span>`
+        : ''
+
+      // Badge de remodelación detectada
+      const badgeRem = l._condicion === 'remodelada'
+        ? `<span style="display:inline-block;margin-bottom:3px;margin-left:4px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600;background:#fce7f3;color:#9d174d;">🔧 Remodelada</span>`
+        : l._condicion === 'estreno'
+        ? `<span style="display:inline-block;margin-bottom:3px;margin-left:4px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600;background:#ede9fe;color:#5b21b6;">✨ Estreno</span>`
+        : ''
+
+      // Precio ajustado (si difiere >3%)
+      const ajusteLabel = l._precioAjustado && l._totalAjuste && Math.abs(l._totalAjuste) > 0.03
+        ? `<span style="color:#6b7280;font-size:10px;">→ ajustado: <strong>${fmt.format(l._precioAjustado)}</strong> (${l._totalAjuste > 0 ? '+' : ''}${Math.round(l._totalAjuste*100)}%)</span>`
+        : ''
+
+      // Borde según clasificación
+      const bordeStyle = esTecho    ? 'border-color:#e5e7eb;opacity:0.7;'
+                       : esVecina   ? 'border-color:#fcd34d;border-width:1.5px;'
+                       : l._clasificacion === 'fuerte' ? 'border-color:#86efac;border-width:1.5px;'
+                       : ''
+
+      // USD/m² a mostrar: preferir el ajustado
+      const pm2Show = l._pm2 || l.precio_m2_cubierta || l.precio_m2
+      const areaShow = l._areaM2 || l.area_m2
+
       return `
       <a href="${l.url_fuente}" target="_blank" rel="noopener" class="card-hover block bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-4" style="${bordeStyle}">
         ${l.imagen_url ? `<img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block" onerror="this.style.display='none'" />` : ''}
         <div class="flex-1 min-w-0">
-          ${badge}
+          <div class="flex flex-wrap gap-1 mb-1">${badgeVecina}${badgeScore}${badgeRem}</div>
           <p class="font-semibold text-gray-800 text-sm truncate">${l.titulo || tipo + ' en ' + sector}</p>
           <p class="text-xs text-gray-500 mt-0.5 truncate">${(urbLabel ? urbLabel + ' · ' : '') + (l.sector || sector)}</p>
           <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 items-center">
             ${l.precio    ? `<span class="font-bold text-brand text-sm">${fmt.format(l.precio)}</span>` : ''}
-            ${l.area_m2   ? `<span>${fmtN(l.area_m2)} m²</span>` : ''}
-            ${l.precio_m2 ? `<span class="text-gray-400">${fmtM2(l.precio_m2)}</span>` : ''}
+            ${areaShow    ? `<span>${fmtN(areaShow)} m²</span>` : ''}
+            ${pm2Show     ? `<span class="text-gray-400">${fmtM2(pm2Show)}</span>` : ''}
             ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
             ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
             ${l.parqueos     ? `<span>🚗 ${l.parqueos}</span>` : ''}
           </div>
+          ${ajusteLabel ? `<div class="mt-1">${ajusteLabel}</div>` : ''}
+          ${esTecho && l._motivoTecho ? `<p style="font-size:10px;color:#9ca3af;margin-top:3px;">↑ Techo: ${l._motivoTecho}</p>` : ''}
         </div>
         <div class="flex-shrink-0 text-blue-400 self-center">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -2414,68 +2526,235 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
 
   // ── Utilidades ──
   function prom(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null }
+  function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)) }
+  function getCompCons(c) { return c.area_cubierta_m2 || c.area_m2 || null }
+  function getCompTerr(c) { return c.area_total_m2   || c.area_m2 || null }
+
+  // Detectar remodelación / estreno desde el título del listing
+  function detectarCondicion(comp) {
+    const t = (comp.titulo || '').toLowerCase()
+    if (/remodelad[ao]|renovad[ao]|remozad[ao]|restaurad[ao]/.test(t)) return 'remodelada'
+    if (/estreno|nueva\s+construccion|obra\s+nueva|entrega\s+inmediata/.test(t)) return 'estreno'
+    return 'usada'
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MOTOR ACM v2 — Scoring 0-100 por comparable vs ficha sujeto
+  // ═══════════════════════════════════════════════════════════════
+  function calcScore(comp, ficha) {
+    let score = 0
+    const compUrb  = normUrb(comp.urbanizacion || '')
+    const fichaUrb = normUrb(ficha.urb || '')
+
+    // ETAPA (25 pts)
+    if (ficha.subzona) {
+      const sub = ficha.subzona.toLowerCase().trim()
+      const enUrb = (comp.urbanizacion || '').toLowerCase().includes(sub)
+      const enTit = (comp.titulo     || '').toLowerCase().includes(sub)
+      if (enUrb || enTit) score += 25
+      else if (compUrb === fichaUrb) score += 10
+    }
+
+    // URBANIZACIÓN (20 pts)
+    if (compUrb === fichaUrb)           score += 20
+    else if (comp._origen === 'vecina') score += 10
+
+    // TIPO (15 pts — filtro duro ya garantiza mismo tipo)
+    score += 15
+
+    // TERRENO (10 pts)
+    const cT = getCompTerr(comp)
+    if (cT && ficha.areaTotal) {
+      const d = Math.abs(cT - ficha.areaTotal) / ficha.areaTotal
+      score += d <= 0.10 ? 10 : d <= 0.20 ? 5 : 0
+    } else { score += 5 }
+
+    // CONSTRUCCIÓN (10 pts)
+    const cC = getCompCons(comp)
+    if (cC && ficha.areaCons) {
+      const d = Math.abs(cC - ficha.areaCons) / ficha.areaCons
+      score += d <= 0.10 ? 10 : d <= 0.20 ? 5 : 0
+    } else { score += 5 }
+
+    // DORMITORIOS (5 pts)
+    if (ficha.habitaciones && comp.habitaciones) {
+      const d = Math.abs(comp.habitaciones - ficha.habitaciones)
+      score += d === 0 ? 5 : d === 1 ? 2 : 0
+    } else { score += 3 }
+
+    // BAÑOS (10 pts)
+    if (ficha.banos && comp.banos) {
+      const d = Math.abs(comp.banos - ficha.banos)
+      score += d === 0 ? 10 : d === 1 ? 5 : 0
+    } else { score += 5 }
+
+    // PARQUEOS (3 pts)
+    const fichaP = parseInt(ficha.parqueos) || 0
+    if (fichaP && comp.parqueos != null) {
+      const d = Math.abs((parseInt(comp.parqueos) || 0) - fichaP)
+      score += d === 0 ? 3 : d === 1 ? 1 : 0
+    } else { score += 1 }
+
+    score += 1  // antigüedad — sin dato en BD, neutral
+
+    return Math.min(score, 100)
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MOTOR ACM v2 — Ajustes técnicos sobre el comparable
+  // ═══════════════════════════════════════════════════════════════
+  function calcAjustes(comp, ficha) {
+    const cC = getCompCons(comp)
+    const cT = getCompTerr(comp)
+    let precio = comp.precio || 0
+    const ajustes = {}
+
+    // A0 — Negociación portal → cierre (siempre -7%)
+    ajustes.negociacion = -0.07
+    precio *= 0.93
+
+    // A1 — Remodelación / estreno (detectado del título)
+    const condComp = detectarCondicion(comp)
+    comp._condicion = condComp
+    if (condComp === 'remodelada') {
+      ajustes.remodelacion = -0.10   // alcance desconocido → conservador
+      precio *= 0.90
+    } else if (condComp === 'estreno') {
+      ajustes.remodelacion = -0.18   // estreno vs usada
+      precio *= 0.82
+    }
+
+    // A2 — Diferencia de construcción
+    if (cC && ficha.areaCons) {
+      const dPct = (cC - ficha.areaCons) / ficha.areaCons
+      if (Math.abs(dPct) > 0.02) {
+        const adj = -clamp(dPct * 0.25, -0.05, 0.04)
+        ajustes.construccion = adj
+        precio *= (1 + adj)
+      }
+    }
+
+    // A3 — Diferencia de terreno
+    if (cT && ficha.areaTotal) {
+      const dPct = (cT - ficha.areaTotal) / ficha.areaTotal
+      if (Math.abs(dPct) > 0.05) {
+        const adj = -clamp(dPct * 0.15, -0.04, 0.03)
+        ajustes.terreno = adj
+        precio *= (1 + adj)
+      }
+    }
+
+    // A4 — Diferencia de baños
+    if (ficha.banos && comp.banos) {
+      const dB = comp.banos - ficha.banos
+      if      (dB ===  1) { ajustes.banos = -0.055; precio *= 0.945 }
+      else if (dB === -1) { ajustes.banos =  0.040; precio *= 1.040 }
+      else if (dB >=   2) { ajustes.banos = -0.120; precio *= 0.880; comp._banosMuySuperiores = true }
+    }
+
+    // A5 — Diferencia de dormitorios
+    if (ficha.habitaciones && comp.habitaciones) {
+      const dD = comp.habitaciones - ficha.habitaciones
+      if      (dD ===  1) { ajustes.dormitorios = -0.03; precio *= 0.97 }
+      else if (dD === -1) { ajustes.dormitorios =  0.03; precio *= 1.03 }
+    }
+
+    // A6 — Penalización por distancia geográfica (vecinas)
+    if (comp._origen === 'vecina' && comp._peso) {
+      const locAdj = -(1 - comp._peso) * 0.08
+      ajustes.ubicacion = locAdj
+      precio *= (1 + locAdj)
+    }
+
+    const totalAjuste = comp.precio > 0 ? (precio - comp.precio) / comp.precio : 0
+    const reclasificar = Math.abs(totalAjuste) > 0.20 || comp._banosMuySuperiores === true
+
+    comp._precioAjustado = precio
+    comp._totalAjuste    = totalAjuste
+    comp._ajustes        = ajustes
+    return { precio_ajustado: precio, total_ajuste: totalAjuste, reclasificar }
+  }
 
   function calcStats(data) {
     const cp = data.filter(l => l.precio > 0)
 
-    // Preferir precio_m2_cubierta (m² construcción) cuando está disponible
-    const getPm2 = l => l.precio_m2_cubierta || l.precio_m2 || null
-    const getArea = l => l.area_cubierta_m2 || l.area_m2 || null
-
-    // Anotar en cada listing el pm2 y peso efectivos
+    // USD/m² por comparable: preferir precio ajustado / m² construcción
     data.forEach(l => {
-      l._pm2    = getPm2(l)
-      l._areaM2 = getArea(l)
-      if (l._peso == null) l._peso = 1.0  // sin cascada → peso completo
+      const cC = getCompCons(l)
+      if (l._precioAjustado && cC) {
+        l._pm2 = l._precioAjustado / cC
+      } else {
+        l._pm2 = l.precio_m2_cubierta || l.precio_m2 || null
+      }
+      l._areaM2 = cC || null
+      if (l._peso  == null) l._peso  = 1.0
+      if (l._score == null) l._score = 55  // sin clasificar → puntaje mínimo
     })
 
-    const cm = data.filter(l => l._pm2 > 0)
-    const m2sorted = [...cm].sort((a, b) => a._pm2 - b._pm2)
+    // Separar principales (clasificados) de techos y sin clasificar
+    const clasificados  = data.filter(l => l._clasificacion && l._pm2 > 0)
+    const principales   = clasificados.filter(l => ['fuerte','aceptable','debil'].includes(l._clasificacion))
+    const fuertes       = principales.filter(l => l._clasificacion === 'fuerte')
+    const aceptables    = principales.filter(l => l._clasificacion === 'aceptable')
+    const debiles       = principales.filter(l => l._clasificacion === 'debil')
+    const techos        = clasificados.filter(l => l._clasificacion === 'techo')
+    const sinClasif     = data.filter(l => !l._clasificacion && l._pm2 > 0)
 
-    let core = m2sorted, metodo, trimmed = false
-    if (cm.length >= 10) {
-      const trimN = Math.floor(cm.length * 0.3)
-      core = m2sorted.slice(trimN, m2sorted.length - trimN)
-      metodo = `${core.length} de ${cm.length} comparables (media recortada)`
-      trimmed = true
-    } else if (cm.length >= 5) {
-      core = m2sorted.slice(1, m2sorted.length - 1)
-      metodo = `${core.length} de ${cm.length} comparables (media recortada)`
-      trimmed = true
-    } else {
-      metodo = `${cm.length} comparables`
-    }
+    // Pool de cálculo: principales si existen, si no: todos con PM2
+    const pool = principales.length ? principales : sinClasif
 
-    // Promedio ponderado con lógica perito:
-    // Siempre verifica sobre TODOS los cm (no solo el core recortado)
-    // para que el trimming no elimine los comparables de la urb exacta
-    const deUrbTodos = cm.filter(l => l._origen === 'urb' && l._pm2 > 0)
-    const promPonderado = items => {
-      const valid = items.filter(l => l._pm2 > 0)
-      if (!valid.length) return null
-      if (deUrbTodos.length >= 3) {
-        // ≥3 de urb exacta → solo urb, modo perito profesional
-        return prom(deUrbTodos.map(l => l._pm2))
+    // ── Nivel de confiabilidad ──
+    let confiabilidad, colorConf, iconConf
+    if      (fuertes.length >= 2)                              { confiabilidad = 'ALTA';       colorConf = '#15803d'; iconConf = '●●●' }
+    else if (fuertes.length >= 1 && aceptables.length >= 1)   { confiabilidad = 'MEDIA-ALTA'; colorConf = '#16a34a'; iconConf = '●●○' }
+    else if (aceptables.length >= 2)                           { confiabilidad = 'MEDIA';      colorConf = '#b45309'; iconConf = '●●○' }
+    else if (fuertes.length + aceptables.length >= 1)          { confiabilidad = 'MEDIA-BAJA'; colorConf = '#c2410c'; iconConf = '●○○' }
+    else if (sinClasif.length >= 3)                            { confiabilidad = 'MEDIA';      colorConf = '#b45309'; iconConf = '●●○' }
+    else                                                       { confiabilidad = 'BAJA';       colorConf = '#dc2626'; iconConf = '○○○' }
+
+    // ── Promedio ponderado por score × peso de cascada ──
+    const calcPm2Ponderado = () => {
+      if (!pool.length) return null
+
+      // Perito: si ≥3 de la urb exacta → usar SOLO esos (con sus ajustes)
+      const deUrb = data.filter(l => l._origen === 'urb' && l._pm2 > 0)
+      if (deUrb.length >= 3) {
+        const scoreW = l => l._score || 70
+        const sumW = deUrb.reduce((a, l) => a + scoreW(l), 0)
+        return deUrb.reduce((a, l) => a + l._pm2 * scoreW(l), 0) / sumW
       }
-      // Menos de 3 de urb: ponderado con vecinas de USD/m² compatible
-      const pm2Ref = deUrbTodos.length ? prom(deUrbTodos.map(l => l._pm2)) : null
-      const paraCalculo = pm2Ref
-        ? valid.filter(l => l._origen === 'urb' || (l._pm2 >= pm2Ref * 0.75 && l._pm2 <= pm2Ref * 1.25))
-        : valid
-      const sumPeso = paraCalculo.reduce((a, l) => a + (l._peso || 1), 0)
-      return paraCalculo.reduce((a, l) => a + l._pm2 * (l._peso || 1), 0) / sumPeso
+
+      // General: score × peso de cascada como factor combinado
+      const pm2Ref = deUrb.length ? prom(deUrb.map(l => l._pm2)) : null
+      const elegibles = pm2Ref
+        ? pool.filter(l => l._origen === 'urb' || (l._pm2 >= pm2Ref * 0.75 && l._pm2 <= pm2Ref * 1.25))
+        : pool
+      if (!elegibles.length) return null
+
+      const pesoFn  = l => (l._score || 55) * (l._peso || 1.0)
+      const sumPeso = elegibles.reduce((a, l) => a + pesoFn(l), 0)
+      return elegibles.reduce((a, l) => a + l._pm2 * pesoFn(l), 0) / sumPeso
     }
+
+    const nPool = pool.length
+    const metodo = principales.length
+      ? `${nPool} comp. · ${fuertes.length}★ fuertes ${aceptables.length}✓ aceptables · ajustado por perito`
+      : `${nPool} comparables · promedio ponderado`
 
     return {
-      avg:          prom(cp.map(l => l.precio)),
-      min:          cp.length ? Math.min(...cp.map(l => l.precio)) : null,
-      max:          cp.length ? Math.max(...cp.map(l => l.precio)) : null,
-      avgM2:        promPonderado(core),
-      count:        cp.length,
-      coreCount:    core.length,
-      totalM2Count: cm.length,
+      avg:           prom(cp.map(l => l.precio)),
+      min:           cp.length ? Math.min(...cp.map(l => l.precio)) : null,
+      max:           cp.length ? Math.max(...cp.map(l => l.precio)) : null,
+      avgM2:         calcPm2Ponderado(),
+      count:         cp.length,
+      coreCount:     nPool,
+      totalM2Count:  data.filter(l => l._pm2 > 0).length,
       metodo,
-      trimmed,
+      confiabilidad, colorConf, iconConf,
+      nFuertes:      fuertes.length,
+      nAceptables:   aceptables.length,
+      nDebiles:      debiles.length,
+      nTechos:       techos.length,
     }
   }
   function mostrarLoader(s) { document.getElementById('loader-wrap').classList.toggle('hidden', !s) }
