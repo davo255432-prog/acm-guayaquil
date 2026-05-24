@@ -339,16 +339,17 @@
     // ══════════════════════════════════════════════════════════════════
     // ZONA 1 — Av. León Febres Cordero / Vía a Daule
     // Grupo A (medio-alto $1,100-1,400/m²): La Joya, Volare, Villa Club
-    // Grupo B (medio $800-1,100/m²): La Rioja, La Aurora, El Condado, Vicolinci, Vistana
+    // Grupo B (medio $800-1,100/m²): La Rioja, La Aurora, El Condado, Vicolinci, Vistana, Plaza Madeira
     // ══════════════════════════════════════════════════════════════════
 
     'la joya': [
-      { urb: 'volare',         peso: 0.9 }, // frente a La Joya, mismo km, mismo precio/m²
+      { urb: 'volare',         peso: 0.9  }, // frente a La Joya, mismo km, mismo precio/m²
       { urb: 'villa club',     peso: 0.85 }, // km 12, mismo segmento medio-alto
       { urb: 'la rioja',       peso: 0.75 }, // km 17, un peldaño abajo en precio
       { urb: 'la aurora',      peso: 0.7  },
       { urb: 'el condado',     peso: 0.65 },
       { urb: 'vicolinci',      peso: 0.65 },
+      { urb: 'plaza madeira',  peso: 0.65 }, // km 12-13, $850-1,060/m², adyacente
     ],
     'volare': [
       { urb: 'la joya',        peso: 0.9  },
@@ -356,6 +357,7 @@
       { urb: 'la rioja',       peso: 0.75 },
       { urb: 'la aurora',      peso: 0.7  },
       { urb: 'el condado',     peso: 0.65 },
+      { urb: 'plaza madeira',  peso: 0.65 },
     ],
     'villa club': [
       { urb: 'volare',         peso: 0.9  },
@@ -363,10 +365,12 @@
       { urb: 'la rioja',       peso: 0.75 },
       { urb: 'la aurora',      peso: 0.7  },
       { urb: 'el condado',     peso: 0.65 },
+      { urb: 'plaza madeira',  peso: 0.65 },
     ],
     'la rioja': [
       { urb: 'la aurora',      peso: 0.85 }, // mismo segmento B
       { urb: 'el condado',     peso: 0.8  },
+      { urb: 'plaza madeira',  peso: 0.8  }, // mismo segmento B, km cercano
       { urb: 'vistana',        peso: 0.75 },
       { urb: 'vicolinci',      peso: 0.75 },
       { urb: 'la joya',        peso: 0.7  },
@@ -376,6 +380,7 @@
     'la aurora': [
       { urb: 'la rioja',       peso: 0.85 },
       { urb: 'el condado',     peso: 0.85 },
+      { urb: 'plaza madeira',  peso: 0.8  }, // km 12-13, mismo corredor, mismo segmento
       { urb: 'vistana',        peso: 0.8  },
       { urb: 'vicolinci',      peso: 0.75 },
       { urb: 'porton del rio', peso: 0.75 },
@@ -385,22 +390,35 @@
     'el condado': [
       { urb: 'la aurora',      peso: 0.85 },
       { urb: 'la rioja',       peso: 0.8  },
+      { urb: 'plaza madeira',  peso: 0.8  },
       { urb: 'vistana',        peso: 0.8  },
       { urb: 'vicolinci',      peso: 0.75 },
       { urb: 'porton del rio', peso: 0.75 },
       { urb: 'la joya',        peso: 0.65 },
+    ],
+    'plaza madeira': [
+      { urb: 'la aurora',      peso: 0.85 }, // mismo km, mismo segmento B
+      { urb: 'la rioja',       peso: 0.85 },
+      { urb: 'el condado',     peso: 0.8  },
+      { urb: 'vistana',        peso: 0.75 },
+      { urb: 'vicolinci',      peso: 0.75 },
+      { urb: 'la joya',        peso: 0.65 }, // segmento A, un escalón arriba
+      { urb: 'volare',         peso: 0.65 },
+      { urb: 'villa club',     peso: 0.65 },
     ],
     'vicolinci': [
       { urb: 'la aurora',      peso: 0.8  },
       { urb: 'el condado',     peso: 0.8  },
       { urb: 'vistana',        peso: 0.8  },
       { urb: 'la rioja',       peso: 0.75 },
+      { urb: 'plaza madeira',  peso: 0.75 },
       { urb: 'brisas del norte', peso: 0.7 },
     ],
     'vistana': [
       { urb: 'la aurora',      peso: 0.85 },
       { urb: 'el condado',     peso: 0.85 },
       { urb: 'vicolinci',      peso: 0.8  },
+      { urb: 'plaza madeira',  peso: 0.8  },
       { urb: 'la rioja',       peso: 0.75 },
       { urb: 'porton del rio', peso: 0.75 },
     ],
