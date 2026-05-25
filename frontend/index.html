@@ -1132,8 +1132,15 @@
             else if  (comp._score >= 70)  comp._clasificacion = 'aceptable'
             else if  (comp._score >= 45)  comp._clasificacion = 'debil'
             else {
-              comp._clasificacion = 'techo'
-              comp._motivoTecho   = `Baja comparabilidad (${comp._score}/100)`
+              // Si es la misma urbanización → mínimo débil, nunca techo por score
+              // Solo otra urb con score muy bajo se descarta
+              const mismaUrb = normUrb(comp.urbanizacion || '') === normUrb(urbanizacion || '')
+              if (mismaUrb) {
+                comp._clasificacion = 'debil'  // otra etapa pero misma urb → débil siempre
+              } else {
+                comp._clasificacion = 'techo'
+                comp._motivoTecho   = `Baja comparabilidad (${comp._score}/100)`
+              }
             }
           })
         }
