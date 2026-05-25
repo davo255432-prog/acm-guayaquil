@@ -2436,53 +2436,51 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
 
     return `<div class="rpt-page" style="background:${_CREAM};position:relative;">
       ${H()}
-      <div style="flex:1;padding:6mm 12mm 14mm;display:flex;flex-direction:column;gap:4mm;overflow:hidden;">
+      <div style="flex:1;padding:6mm 12mm 14mm;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">
 
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4mm;">
-          <div style="flex:1;">${secTitle('08','Conclusión','técnica.','Síntesis del análisis comparativo de mercado y valor sugerido de salida al mercado.')}</div>
-        </div>
+        <div>${secTitle('08','Conclusión','técnica.','Síntesis del análisis comparativo de mercado y valor sugerido de salida al mercado.')}</div>
 
         ${valEst ? `
-        <div style="border:2px solid ${_NAV};border-radius:2mm;padding:5mm 8mm;display:grid;grid-template-columns:1fr 1fr;gap:5mm;align-items:center;">
+        <div style="border:2px solid ${_NAV};border-radius:2mm;padding:6mm 8mm;display:grid;grid-template-columns:1fr 1fr;gap:5mm;align-items:center;">
           <div>
-            <p style="font-size:5.5pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.18em;margin:0 0 2mm 0;">Valor sugerido de salida al mercado</p>
-            <p style="font-size:28pt;font-weight:900;color:${_NAV};letter-spacing:-.02em;margin:0;line-height:1;">${fmt.format(valEst)}</p>
+            <p style="font-size:5.5pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.18em;margin:0 0 2.5mm 0;">Valor sugerido de salida al mercado</p>
+            <p style="font-size:30pt;font-weight:900;color:${_NAV};letter-spacing:-.02em;margin:0;line-height:1;">${fmt.format(valEst)}</p>
           </div>
           <div style="border-left:1px solid #ddd8cf;padding-left:6mm;">
-            <p style="font-size:5.5pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.15em;margin:0 0 2mm 0;">Rango recomendado</p>
-            <p style="font-size:11pt;font-weight:800;color:${_NAV};margin:0 0 1mm 0;">${bandMin} — ${bandMax}</p>
+            <p style="font-size:5.5pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.15em;margin:0 0 2.5mm 0;">Rango recomendado</p>
+            <p style="font-size:12pt;font-weight:800;color:${_NAV};margin:0 0 1.5mm 0;">${bandMin} — ${bandMax}</p>
             <p style="font-size:5.5pt;color:#9ca3af;margin:0;">Banda ±4.5% sobre valor base ACM</p>
           </div>
         </div>` : `
-        <div style="border:2px solid ${_NAV};border-radius:2mm;padding:5mm 8mm;text-align:center;">
+        <div style="border:2px solid ${_NAV};border-radius:2mm;padding:6mm 8mm;text-align:center;">
           <p style="font-size:5.5pt;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.18em;margin:0 0 2mm 0;">Rango de mercado estimado</p>
           <p style="font-size:18pt;font-weight:900;color:${_NAV};margin:0;">${_stats.min?fmt.format(_stats.min):'—'} — ${_stats.max?fmt.format(_stats.max):'—'}</p>
         </div>`}
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm;">
           <div>
-            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.15em;margin:0 0 2.5mm 0;">Síntesis del análisis</p>
-            <p style="font-size:7.5pt;color:#374151;line-height:1.75;margin:0 0 3mm 0;"><span style="float:left;font-size:24pt;font-weight:900;font-family:'Playfair Display',serif;color:${_NAV};line-height:.85;margin:0 2mm 0 0;">S</span>${synthText}</p>
+            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.15em;margin:0 0 3mm 0;">Síntesis del análisis</p>
+            <p style="font-size:7.5pt;color:#374151;line-height:1.85;margin:0 0 3mm 0;"><span style="float:left;font-size:24pt;font-weight:900;font-family:'Playfair Display',serif;color:${_NAV};line-height:.85;margin:0 2mm 0 0;">S</span>${synthText}</p>
             ${notas ? `<p style="font-size:5.5pt;font-weight:700;color:${_NAV};text-transform:uppercase;letter-spacing:.12em;margin:3mm 0 1.5mm 0;">Observaciones del agente</p><p style="font-size:7pt;color:#374151;line-height:1.7;margin:0;">${notas}</p>` : ''}
           </div>
-          <div style="background:${_NAV};border-radius:2mm;padding:5mm 5.5mm;">
-            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.15em;margin:0 0 2.5mm 0;">Nota metodológica</p>
-            <p style="font-size:7pt;color:rgba(255,255,255,.85);line-height:1.75;margin:0;">Este ACM es un estudio comparativo de mercado con fines referenciales, basado en datos públicos de <em>Plusvalía.com</em>. No reemplaza una tasación oficial certificada. Los valores pueden variar según condiciones físicas específicas, estado de conservación y condiciones del mercado al momento de la transacción.</p>
+          <div style="background:${_NAV};border-radius:2mm;padding:5.5mm 5.5mm;">
+            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.15em;margin:0 0 3mm 0;">Nota metodológica</p>
+            <p style="font-size:7.5pt;color:rgba(255,255,255,.85);line-height:1.85;margin:0;">Este ACM es un estudio comparativo de mercado con fines referenciales, basado en datos públicos de <em>Plusvalía.com</em>. No reemplaza una tasación oficial certificada. Los valores pueden variar según condiciones físicas específicas, estado de conservación y condiciones del mercado al momento de la transacción.</p>
           </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4mm;">
-          <div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;padding:4mm 5mm;">
-            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.15em;margin:0 0 3mm 0;">Fortalezas identificadas</p>
+          <div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;padding:5mm 5.5mm;">
+            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.15em;margin:0 0 3.5mm 0;">Fortalezas identificadas</p>
             ${mkList(fuerzas, _GOLD)}
           </div>
-          <div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;padding:4mm 5mm;">
-            <p style="font-size:5.5pt;font-weight:700;color:${_NAV};text-transform:uppercase;letter-spacing:.15em;margin:0 0 3mm 0;">Aspectos a considerar</p>
+          <div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;padding:5mm 5.5mm;">
+            <p style="font-size:5.5pt;font-weight:700;color:${_NAV};text-transform:uppercase;letter-spacing:.15em;margin:0 0 3.5mm 0;">Aspectos a considerar</p>
             ${mkList(debiles, _NAV)}
           </div>
         </div>
 
-        <div style="border-top:1px solid #ddd8cf;padding-top:4mm;margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;">
+        <div style="border-top:1px solid #ddd8cf;padding-top:4mm;display:flex;align-items:flex-end;justify-content:space-between;">
           <div>
             <p style="font-size:18pt;font-weight:700;font-style:italic;font-family:'Playfair Display',serif;color:${_NAV};margin:0 0 1mm 0;">${AGENTE.nombre}<span style="color:${_GOLD};">.</span></p>
             <div style="height:.4mm;width:28mm;background:${_GOLD};margin-bottom:2mm;"></div>
@@ -2544,41 +2542,43 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
         </div>
       </div>
 
-      <div style="flex:1;display:flex;flex-direction:column;padding:8mm 16mm 10mm;">
-        <div style="margin-bottom:6mm;">
-          <p style="font-size:28pt;font-weight:900;color:white;margin:0;line-height:1;letter-spacing:-.02em;">${firstName}</p>
-          <p style="font-size:26pt;font-weight:700;font-style:italic;font-family:'Playfair Display',serif;color:${_GOLD};margin:0;line-height:1.05;">${lastName}<span style="color:${_GOLD};">.</span></p>
-          <div style="height:.5mm;width:22mm;background:${_GOLD};opacity:.6;margin-top:3mm;"></div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:8mm 16mm 10mm;">
+
+        <div style="text-align:center;">
+          <p style="font-size:36pt;font-weight:900;color:white;margin:0;line-height:1;letter-spacing:-.02em;">${firstName}</p>
+          <p style="font-size:32pt;font-weight:700;font-style:italic;font-family:'Playfair Display',serif;color:${_GOLD};margin:0;line-height:1.05;">${lastName}<span style="color:${_GOLD};">.</span></p>
+          <div style="height:.5mm;width:28mm;background:${_GOLD};opacity:.6;margin:4mm auto 0;"></div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8mm;flex:1;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10mm;">
           <div>
-            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.18em;margin:0 0 4mm 0;">Datos de contacto</p>
-            <div style="display:flex;flex-direction:column;gap:3.5mm;">
+            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.18em;margin:0 0 5mm 0;">Datos de contacto</p>
+            <div style="display:flex;flex-direction:column;gap:4.5mm;">
               ${contactRows.map(r=>`
-              <div style="border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:3mm;">
-                <p style="font-size:5.5pt;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.12em;margin:0 0 1mm 0;">${r.label}</p>
-                <p style="font-size:9pt;color:white;font-weight:600;margin:0;">${r.value}</p>
+              <div style="border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:4mm;">
+                <p style="font-size:5.5pt;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.12em;margin:0 0 1.5mm 0;">${r.label}</p>
+                <p style="font-size:10pt;color:white;font-weight:600;margin:0;">${r.value}</p>
               </div>`).join('')}
             </div>
           </div>
           <div>
-            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.18em;margin:0 0 4mm 0;">Servicios ofrecidos</p>
-            <div style="display:flex;flex-direction:column;gap:3mm;">
+            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.18em;margin:0 0 5mm 0;">Servicios ofrecidos</p>
+            <div style="display:flex;flex-direction:column;gap:4mm;">
               ${services.map(s=>`
-              <div style="display:flex;align-items:flex-start;gap:2.5mm;">
-                <span style="color:${_GOLD};font-size:8pt;flex-shrink:0;line-height:1.4;margin-top:.1mm;">—</span>
-                <p style="font-size:7.5pt;color:rgba(255,255,255,.8);margin:0;line-height:1.5;">${s}</p>
+              <div style="display:flex;align-items:flex-start;gap:3mm;">
+                <span style="color:${_GOLD};font-size:9pt;flex-shrink:0;line-height:1.4;margin-top:.1mm;">—</span>
+                <p style="font-size:8.5pt;color:rgba(255,255,255,.85);margin:0;line-height:1.5;">${s}</p>
               </div>`).join('')}
             </div>
           </div>
         </div>
 
-        <div style="border-top:1px solid rgba(201,168,76,.4);padding-top:3.5mm;margin-top:6mm;display:flex;justify-content:space-between;align-items:center;">
+        <div style="border-top:1px solid rgba(201,168,76,.4);padding-top:3.5mm;display:flex;justify-content:space-between;align-items:center;">
           <p style="font-size:6pt;color:rgba(255,255,255,.35);margin:0;text-transform:uppercase;letter-spacing:.1em;">${_rptNro} · ${_rptFecha}</p>
           <p style="font-size:6pt;color:rgba(255,255,255,.5);margin:0;font-weight:600;letter-spacing:.05em;">Gracias por su confianza</p>
           <p style="font-size:6pt;color:${_GOLD};font-weight:700;margin:0;">${_rptPg+1} / ${_pgTotal()}</p>
         </div>
+
       </div>
     </div>`
   }
