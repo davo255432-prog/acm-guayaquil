@@ -2819,8 +2819,9 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
   function generarConclusionACM(stats, ficha, listings) {
     const nF = stats.nFuertes  || 0
     const nA = stats.nAceptables || 0
+    const nD = stats.nDebiles  || 0
     const nT = stats.nTechos   || 0
-    const total  = nF + nA
+    const total  = nF + nA + nD   // todos los no-techo usados en el análisis
     const conf   = stats.confiabilidad
     const avgM2  = stats.avgM2
     const areaCons = ficha.areaCons
@@ -2838,13 +2839,22 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     const banDesc = ficha.banos ? ` · ${ficha.banos} baños` : ''
     const tipDesc = (habDesc || banDesc) ? ` (${(habDesc+banDesc).replace(/^ · /,'').trim()})` : ''
 
+    // Descripción de calidad según mix de comparables
+    const calidadDesc = (nF + nA) >= total * 0.5
+      ? 'alta compatibilidad técnica y tipológica'
+      : nD > 0 && (nF + nA) === 0
+        ? 'compatibilidad tipológica moderada — mercado con oferta reducida para esta tipología'
+        : 'compatibilidad técnica y tipológica mixta'
+
     let parrafo1
-    if (total <= 3) {
-      parrafo1 = `La tipología analizada${tipDesc}${estadoDesc} presenta oferta comparable limitada en el mercado activo — esto refleja exclusividad del producto, no insuficiencia del análisis. Los ${total} comparable${total!==1?'s':''} identificado${total!==1?'s':''} son de alta comparabilidad directa${avgScore ? ` (score promedio: ${avgScore}/100)` : ''}, cumpliendo el estándar mínimo de 3 comparables exigido por metodologías internacionales de valoración (USPAP · IVS). Ampliar el universo incorporaría propiedades de menor compatibilidad tipológica que distorsionarían el resultado.`
+    if (total === 0) {
+      parrafo1 = `La tipología analizada${tipDesc}${estadoDesc} no registra comparables activos con coincidencia directa en el período de análisis. El valor estimado se obtiene mediante extrapolación de propiedades adyacentes con ajustes técnicos. Resultado altamente referencial.`
+    } else if (total <= 3) {
+      parrafo1 = `La tipología analizada${tipDesc}${estadoDesc} presenta oferta comparable limitada en el mercado activo — esto refleja exclusividad del producto, no insuficiencia del análisis. Los ${total} comparable${total!==1?'s':''} identificado${total!==1?'s':''} presentan ${calidadDesc}${avgScore ? ` (score promedio: ${avgScore}/100)` : ''}, cumpliendo el estándar mínimo de 3 comparables exigido por metodologías internacionales de valoración (USPAP · IVS). Ampliar el universo incorporaría propiedades de menor compatibilidad tipológica que distorsionarían el resultado.`
     } else if (total <= 6) {
-      parrafo1 = `Se identificaron ${total} comparables con alta compatibilidad técnica y tipológica${avgScore ? ` (score promedio ${avgScore}/100)` : ''}. El universo de análisis es representativo del segmento.`
+      parrafo1 = `Se identificaron ${total} comparables con ${calidadDesc}${avgScore ? ` (score promedio ${avgScore}/100)` : ''}. El universo de análisis es representativo del segmento.`
     } else {
-      parrafo1 = `Se identificaron ${total} comparables directos con alta compatibilidad técnica y tipológica${avgScore ? ` (score promedio ${avgScore}/100)` : ''}, conformando un universo estadístico robusto.`
+      parrafo1 = `Se identificaron ${total} comparables directos con ${calidadDesc}${avgScore ? ` (score promedio ${avgScore}/100)` : ''}, conformando un universo estadístico robusto.`
     }
 
     // Posicionamiento top-down entre techo y piso
