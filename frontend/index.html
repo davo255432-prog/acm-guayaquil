@@ -1349,32 +1349,25 @@
       const pm2Show = l._pm2 || l.precio_m2_cubierta || l.precio_m2
       const areaShow = l._areaM2 || l.area_m2
 
-      // Banner de techo: motivo legible y prominente
-      const motivoIcono = l._motivoTecho
-        ? l._motivoTecho.includes('construcción') || l._motivoTecho.includes('m²') ? '📐'
-        : l._motivoTecho.includes('Dormitorios') || l._motivoTecho.includes('dormitorios') ? '🛏'
-        : l._motivoTecho.includes('Baños') || l._motivoTecho.includes('baños') ? '🚿'
-        : l._motivoTecho.includes('Ajuste') ? '⚖️'
-        : l._motivoTecho.includes('Score') ? '📊'
-        : '⚠️'
-        : '⚠️'
+      // Motivo techo: badge compacto inline
+      const motivoCorto = l._motivoTecho
+        ? l._motivoTecho.includes('construcción') || l._motivoTecho.includes('m²') ? '📐 Área fuera de rango'
+        : l._motivoTecho.includes('Dormitorios') ? '🛏 Dormitorios muy superiores'
+        : l._motivoTecho.includes('Baños') ? '🚿 Baños muy superiores'
+        : l._motivoTecho.includes('Ajuste') ? '⚖️ Ajuste excesivo'
+        : l._motivoTecho.includes('Score') ? '📊 Baja comparabilidad'
+        : '⚠️ No comparable'
+        : ''
 
-      const techoBanner = esTecho
-        ? `<div style="display:flex;align-items:center;gap:6px;background:#fff3cd;border:1px solid #fde68a;border-radius:8px;padding:5px 10px;margin-bottom:6px;">
-            <span style="font-size:13px;">${motivoIcono}</span>
-            <div>
-              <span style="font-size:10px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.05em;">Excluido del cálculo</span>
-              <span style="font-size:10px;color:#b45309;margin-left:4px;">— ${l._motivoTecho || 'no comparable con el sujeto'}</span>
-            </div>
-           </div>`
+      const techoBadgeMotivo = esTecho && motivoCorto
+        ? `<span style="display:inline-block;margin-bottom:3px;margin-left:4px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600;background:#fef3c7;color:#92400e;border:1px solid #fde68a;">${motivoCorto}</span>`
         : ''
 
       return `
       <a href="${l.url_fuente}" target="_blank" rel="noopener" class="card-hover block bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-4" style="${bordeStyle}">
         ${l.imagen_url ? `<img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block ${esTecho?'opacity-50':''}" onerror="this.style.display='none'" />` : ''}
         <div class="flex-1 min-w-0">
-          ${techoBanner}
-          <div class="flex flex-wrap gap-1 mb-1">${badgeVecina}${badgeScore}${badgeRem}</div>
+          <div class="flex flex-wrap gap-1 mb-1">${badgeVecina}${badgeScore}${badgeRem}${techoBadgeMotivo}</div>
           <p class="font-semibold text-sm truncate ${esTecho?'text-gray-400':'text-gray-800'}">${l.titulo || tipo + ' en ' + sector}</p>
           <p class="text-xs text-gray-400 mt-0.5 truncate">${(urbLabel ? urbLabel + ' · ' : '') + (l.sector || sector)}</p>
           <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs items-center ${esTecho?'text-gray-400':'text-gray-600'}">
