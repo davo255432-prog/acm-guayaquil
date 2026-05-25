@@ -2716,15 +2716,19 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     const calcPm2Ponderado = () => {
       if (!pool.length) return null
 
-      // Perito: si ≥3 de la urb exacta → usar SOLO esos (con sus ajustes)
-      const deUrb = data.filter(l => l._origen === 'urb' && l._pm2 > 0)
+      // Perito: si ≥3 de la urb exacta NO-TECHO → usar SOLO esos (modo perito puro)
+      // IMPORTANTE: excluir techos del conteo y del cálculo
+      const deUrb = data.filter(l =>
+        l._origen === 'urb' && l._pm2 > 0 && l._clasificacion !== 'techo'
+      )
       if (deUrb.length >= 3) {
-        const scoreW = l => l._score || 70
-        const sumW = deUrb.reduce((a, l) => a + scoreW(l), 0)
+        const scoreW  = l => l._score || 70
+        const sumW    = deUrb.reduce((a, l) => a + scoreW(l), 0)
         return deUrb.reduce((a, l) => a + l._pm2 * scoreW(l), 0) / sumW
       }
 
       // General: score × peso de cascada como factor combinado
+      // pm2Ref basado solo en comparables no-techo de la urb
       const pm2Ref = deUrb.length ? prom(deUrb.map(l => l._pm2)) : null
       const elegibles = pm2Ref
         ? pool.filter(l => l._origen === 'urb' || (l._pm2 >= pm2Ref * 0.75 && l._pm2 <= pm2Ref * 1.25))
