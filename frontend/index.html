@@ -1870,10 +1870,10 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       ${sub ? `<p style="font-size:6.5pt;color:#6b7280;margin:0;">${sub}</p>` : ''}
     </div>`
 
-  const sBox = (l, v) => `
-    <div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;padding:3.5mm 4.5mm;">
-      <p style="font-size:5.5pt;color:#9ca3af;margin:0 0 1mm 0;text-transform:uppercase;letter-spacing:.1em;font-weight:600;">${l}</p>
-      <p style="font-size:12pt;font-weight:900;color:${_NAV};margin:0;line-height:1.1;">${v}</p>
+  const sBox = (l, v, grande=false) => `
+    <div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;padding:${grande?'5mm':'3.5mm'} 4.5mm;">
+      <p style="font-size:5.5pt;color:#9ca3af;margin:0 0 ${grande?'2mm':'1mm'} 0;text-transform:uppercase;letter-spacing:.1em;font-weight:600;">${l}</p>
+      <p style="font-size:${grande?'14pt':'12pt'};font-weight:900;color:${_NAV};margin:0;line-height:1.1;">${v}</p>
     </div>`
 
   const fBox = (l, v) => `
@@ -2221,60 +2221,91 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
   function pgTabla(comps) {
     const valEst = (_ficha.areaCons||_ficha.areaTotal)&&_stats.avgM2 ? Math.round((_ficha.areaCons||_ficha.areaTotal)*_stats.avgM2) : null
     const avgM2w = _stats.avgM2 ? Math.round(_stats.avgM2) : null
-    const th = (t,align='left',gold=false) => `<th style="padding:2.5mm 2mm;text-align:${align};font-size:5.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${gold?_GOLD:'rgba(255,255,255,.75)'};white-space:nowrap;">${t}</th>`
+    const pocos  = comps.length <= 4   // modo expandido para sets pequeños
+    const rPad   = pocos ? '4mm 2.5mm' : '2.5mm 2mm'
+    const rFsz   = pocos ? '8pt' : '7pt'
+    const thPad  = pocos ? '3.5mm 2.5mm' : '2.5mm 2mm'
+    const th = (t,align='left',gold=false) => `<th style="padding:${thPad};text-align:${align};font-size:${pocos?'6pt':'5.5pt'};font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${gold?_GOLD:'rgba(255,255,255,.75)'};white-space:nowrap;">${t}</th>`
+
+    // Columna de ajuste solo en modo expandido
+    const thAjuste = pocos ? th('Ajustado','right',true) : ''
+
     return `<div class="rpt-page" style="background:${_CREAM};position:relative;">
       ${H()}
-      <div style="flex:1;padding:5mm 12mm 14mm;">
+      <div style="flex:1;padding:5mm 12mm 14mm;display:flex;flex-direction:column;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4mm;margin-bottom:3mm;">
           <div style="flex:1;">${secTitle('05','Tabla','comparativa.','Comparables vigentes seleccionados por homogeneidad de m², tipología y proximidad al inmueble objeto.')}</div>
           <div style="display:flex;gap:2mm;margin-top:1mm;flex-shrink:0;">
-            <span style="background:${_NAV};color:white;font-size:5.5pt;font-weight:700;padding:1mm 3mm;border-radius:10mm;">${comps.length} comparables</span>
+            <span style="background:${_NAV};color:white;font-size:5.5pt;font-weight:700;padding:1mm 3mm;border-radius:10mm;">${comps.length} comparable${comps.length!==1?'s':''}</span>
             <span style="background:white;border:1px solid #ddd8cf;color:#6b7280;font-size:5.5pt;padding:1mm 3mm;border-radius:10mm;">Vigentes · 60 días</span>
           </div>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:7pt;">
+        <table style="width:100%;border-collapse:collapse;font-size:${rFsz};">
           <thead><tr style="background:${_NAV};">
-            ${th('#')}${th('Propiedad')}${th('Ubicación')}${th('Precio','right',true)}${th('M²','right')}${th('USD/M²','right')}${th('HAB','center')}${th('Baños','center')}${th('Parq','center')}${th('Ref.','center')}
+            ${th('#')}${th('Propiedad')}${th('Ubicación')}${th('Precio portal','right',true)}${thAjuste}${th('M²','right')}${th('USD/M²','right')}${th('HAB','center')}${th('Baños','center')}${th('Parq','center')}
           </tr></thead>
           <tbody>
             ${comps.map((l,i)=>{
-              const m2=l._areaM2||l.area_m2, pm2=l._precioM2||l.precio_m2
-              const ref=l.url_fuente?l.url_fuente.replace(/^https?:\/\/(www\.)?/,'').split('/').slice(0,2).join('/').slice(0,14):'—'
-              const bg=i%2===0?'white':_CREAM
+              const cC  = getCompCons(l)
+              const m2  = cC || l.area_m2
+              const pm2 = l._pm2 || l.precio_m2_cubierta || l.precio_m2
+              const bg  = i%2===0 ? 'white' : _CREAM
+              const clsCfg = { fuerte:{c:'#15803d',lbl:'★ Fuerte'}, aceptable:{c:'#854d0e',lbl:'✓ Aceptable'}, debil:{c:'#c2410c',lbl:'⚡ Débil'}, techo:{c:'#6b7280',lbl:'↑ Techo'} }
+              const cls = l._clasificacion ? clsCfg[l._clasificacion] : null
+              const clsBadge = cls && pocos
+                ? `<span style="display:inline-block;font-size:4.5pt;font-weight:700;color:${cls.c};background:${cls.c}18;border-radius:10mm;padding:.3mm 1.5mm;margin-left:1.5mm;">${cls.lbl}${l._score?' '+l._score:''}</span>` : ''
+              const ajCol = pocos
+                ? `<td style="padding:${rPad};text-align:right;">
+                    ${l._precioAjustado
+                      ? `<span style="font-size:7.5pt;font-weight:800;color:#15803d;">${fmt.format(Math.round(l._precioAjustado))}</span>
+                         <span style="display:block;font-size:5pt;color:${l._totalAjuste<0?'#dc2626':'#15803d'};">${l._totalAjuste!=null?(l._totalAjuste>=0?'+':'')+Math.round(l._totalAjuste*100)+'%':''}</span>`
+                      : '—'}
+                   </td>` : ''
               return `<tr style="background:${bg};border-bottom:1px solid #e8e3db;">
-                <td style="padding:2.5mm 2mm;font-size:5.5pt;color:#9ca3af;font-weight:700;">C-${String(i+1).padStart(2,'0')}</td>
-                <td style="padding:2.5mm 2mm;"><p style="margin:0;font-weight:700;color:#111827;font-size:7pt;line-height:1.2;">${(l.titulo||_tipo+' en '+_sector).slice(0,38)}${(l.titulo||'').length>38?'…':''}</p></td>
-                <td style="padding:2.5mm 2mm;font-size:6pt;color:#6b7280;">${(l.urbanizacion?l.urbanizacion+' — ':'')+(l.sector||_sector)}</td>
-                <td style="padding:2.5mm 2mm;text-align:right;font-weight:800;color:${_NAV};font-size:8pt;">${l.precio?fmt.format(l.precio):'—'}</td>
-                <td style="padding:2.5mm 2mm;text-align:right;color:#374151;">${m2?fmtN(m2):'—'}</td>
-                <td style="padding:2.5mm 2mm;text-align:right;color:#6b7280;font-size:6.5pt;">${pm2?'$'+fmtN(Math.round(pm2)):'—'}</td>
-                <td style="padding:2.5mm 2mm;text-align:center;color:#374151;">${l.habitaciones||'—'}</td>
-                <td style="padding:2.5mm 2mm;text-align:center;color:#374151;">${l.banos||'—'}</td>
-                <td style="padding:2.5mm 2mm;text-align:center;color:#374151;">${l.parqueos!=null?l.parqueos:'—'}</td>
-                <td style="padding:2.5mm 2mm;text-align:center;font-size:5.5pt;color:#9ca3af;">${ref}</td>
+                <td style="padding:${rPad};font-size:5.5pt;color:#9ca3af;font-weight:700;">C-${String(i+1).padStart(2,'0')}</td>
+                <td style="padding:${rPad};">
+                  <p style="margin:0;font-weight:700;color:#111827;font-size:${pocos?'7.5pt':'7pt'};line-height:1.25;">${(l.titulo||_tipo+' en '+_sector).slice(0,40)}${(l.titulo||'').length>40?'…':''}${clsBadge}</p>
+                  ${pocos&&l._condicion&&l._condicion!=='usada'?`<p style="margin:.3mm 0 0;font-size:5pt;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;">${l._condicion}</p>`:''}
+                </td>
+                <td style="padding:${rPad};font-size:${pocos?'6.5pt':'6pt'};color:#6b7280;">${(l.urbanizacion?l.urbanizacion+' — ':'')+(l.sector||_sector)}</td>
+                <td style="padding:${rPad};text-align:right;font-weight:800;color:${_NAV};font-size:${pocos?'9pt':'8pt'};">${l.precio?fmt.format(l.precio):'—'}</td>
+                ${ajCol}
+                <td style="padding:${rPad};text-align:right;color:#374151;">${m2?fmtN(m2):'—'}</td>
+                <td style="padding:${rPad};text-align:right;color:#6b7280;font-size:6.5pt;">${pm2?'$'+fmtN(Math.round(pm2)):'—'}</td>
+                <td style="padding:${rPad};text-align:center;color:#374151;">${l.habitaciones||'—'}</td>
+                <td style="padding:${rPad};text-align:center;color:#374151;">${l.banos||'—'}</td>
+                <td style="padding:${rPad};text-align:center;color:#374151;">${l.parqueos!=null?l.parqueos:'—'}</td>
               </tr>`}).join('')}
             <tr style="background:${_NAV};">
-              <td style="padding:3mm 2mm;font-size:6pt;font-weight:900;color:${_GOLD};">ACM</td>
-              <td style="padding:3mm 2mm;" colspan="2"><p style="margin:0;font-weight:700;color:white;font-size:7pt;">Inmueble en valoración</p><p style="margin:0;font-size:5.5pt;color:rgba(255,255,255,.45);">${_sector}${_urb?' · '+_urb:''}</p></td>
-              <td style="padding:3mm 2mm;text-align:right;font-size:10pt;font-weight:900;color:${_GOLD};" colspan="2">${valEst?fmt.format(valEst):'—'}</td>
-              <td style="padding:3mm 2mm;text-align:right;font-weight:700;color:${_GOLD};">${avgM2w?'$'+fmtN(avgM2w):'—'}</td>
-              <td style="padding:3mm 2mm;text-align:center;color:rgba(255,255,255,.6);">${_ficha.habitaciones||'—'}</td>
-              <td style="padding:3mm 2mm;text-align:center;color:rgba(255,255,255,.6);">${_ficha.banos||'—'}</td>
-              <td style="padding:3mm 2mm;text-align:center;color:rgba(255,255,255,.6);">${_ficha.parqueos!=null?_ficha.parqueos:'—'}</td>
-              <td style="padding:3mm 2mm;text-align:center;font-size:5pt;color:${_GOLD};">objeto</td>
+              <td style="padding:${pocos?'4mm':'3mm'} 2mm;font-size:6pt;font-weight:900;color:${_GOLD};">ACM</td>
+              <td style="padding:${pocos?'4mm':'3mm'} 2mm;" colspan="2"><p style="margin:0;font-weight:700;color:white;font-size:${pocos?'8pt':'7pt'};">Inmueble en valoración</p><p style="margin:0;font-size:5.5pt;color:rgba(255,255,255,.45);">${_sector}${_urb?' · '+_urb:''}</p></td>
+              <td style="padding:${pocos?'4mm':'3mm'} 2mm;text-align:right;font-size:${pocos?'11pt':'10pt'};font-weight:900;color:${_GOLD};" colspan="${pocos?3:2}">${valEst?fmt.format(valEst):'—'}</td>
+              <td style="padding:${pocos?'4mm':'3mm'} 2mm;text-align:right;font-weight:700;color:${_GOLD};">${avgM2w?'$'+fmtN(avgM2w):'—'}</td>
+              <td style="padding:${pocos?'4mm':'3mm'} 2mm;text-align:center;color:rgba(255,255,255,.6);">${_ficha.habitaciones||'—'}</td>
+              <td style="padding:${pocos?'4mm':'3mm'} 2mm;text-align:center;color:rgba(255,255,255,.6);">${_ficha.banos||'—'}</td>
+              <td style="padding:${pocos?'4mm':'3mm'} 2mm;text-align:center;color:rgba(255,255,255,.6);">${_ficha.parqueos!=null?_ficha.parqueos:'—'}</td>
             </tr>
           </tbody>
         </table>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3mm;margin-top:3.5mm;">
-          ${sBox('Precio Promedio',_stats.avg?fmt.format(Math.round(_stats.avg)):'—')}
-          ${sBox('USD/m² Promedio',_stats.avgM2?'$'+fmtN(Math.round(_stats.avgM2)):'—')}
-          ${sBox('USD/m² Ponderado',avgM2w?'$'+fmtN(avgM2w):'—')}
-          <div style="background:${_NAV};border-radius:2mm;padding:3.5mm 4.5mm;">
-            <p style="font-size:5.5pt;color:rgba(255,255,255,.45);margin:0 0 1mm 0;text-transform:uppercase;letter-spacing:.1em;font-weight:600;">Valor Base ACM</p>
-            <p style="font-size:12pt;font-weight:900;color:${_GOLD};margin:0;line-height:1.1;">${valEst?fmt.format(valEst):'—'}</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3mm;margin-top:${pocos?'5mm':'3.5mm'};">
+          ${sBox('Precio Promedio',_stats.avg?fmt.format(Math.round(_stats.avg)):'—', pocos)}
+          ${sBox('USD/m² Promedio',_stats.avgM2?'$'+fmtN(Math.round(_stats.avgM2)):'—', pocos)}
+          ${sBox('USD/m² Ponderado',avgM2w?'$'+fmtN(avgM2w):'—', pocos)}
+          <div style="background:${_NAV};border-radius:2mm;padding:${pocos?'5mm':'3.5mm'} 4.5mm;">
+            <p style="font-size:5.5pt;color:rgba(255,255,255,.45);margin:0 0 1.5mm 0;text-transform:uppercase;letter-spacing:.1em;font-weight:600;">Valor Base ACM</p>
+            <p style="font-size:${pocos?'16pt':'12pt'};font-weight:900;color:${_GOLD};margin:0;line-height:1.1;">${valEst?fmt.format(valEst):'—'}</p>
             <p style="font-size:5pt;color:rgba(255,255,255,.35);margin:.5mm 0 0;">Resultado del análisis</p>
           </div>
         </div>
+
+        ${pocos ? `
+        <div style="margin-top:5mm;flex:1;display:flex;flex-direction:column;justify-content:flex-end;">
+          <div style="background:white;border:1px solid #ddd8cf;border-left:3px solid ${_GOLD};border-radius:0 2mm 2mm 0;padding:3.5mm 5mm;">
+            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.15em;margin:0 0 1.5mm 0;">Nota sobre el universo comparativo</p>
+            <p style="font-size:7pt;color:#374151;margin:0;line-height:1.65;">La configuración tipológica analizada presenta oferta activa limitada en el mercado — circunstancia que refleja exclusividad del producto. Los ${comps.length} comparables identificados son de alta compatibilidad directa y cumplen el estándar mínimo de 3 requerido por metodologías internacionales de valoración (USPAP · IVS). La columna "Ajustado" incorpora correcciones por negociación, condición y características físicas.</p>
+          </div>
+        </div>` : ''}
       </div>
       ${F('Tabla Comparativa')}
     </div>`
@@ -2282,8 +2313,9 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
 
   // ── Páginas 6+: Fichas de comparables ──
   function pgFichas(comps) {
-    const perPage = 5
-    const pages = Math.ceil(comps.length / perPage)
+    const pocos   = comps.length <= 4
+    const perPage = pocos ? comps.length : 5   // todos en una página si son ≤4
+    const pages   = Math.ceil(comps.length / perPage)
     const totalVal = (_ficha.areaCons||_ficha.areaTotal)&&_stats.avgM2
       ? fmt.format(Math.round((_ficha.areaCons||_ficha.areaTotal)*_stats.avgM2)) : null
     let html = ''
@@ -2291,27 +2323,30 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       const grupo = comps.slice(p*perPage, (p+1)*perPage)
       const from = p*perPage+1, to = Math.min((p+1)*perPage, comps.length)
       const isLast = p === pages-1
-      const sub = `${p+1} de ${pages}`
-      const subtitleText = p===0
-        ? 'Cinco primeros inmuebles del set. Cada ficha incluye precio publicado, USD/m² calculado y referencia de fuente.'
-        : 'Cinco restantes del set. Posicionamiento del inmueble objeto respecto al conjunto.'
+      const sub = pages > 1 ? `${p+1} de ${pages}` : '1 de 1'
+      const subtitleText = pocos
+        ? `${comps.length} comparables directos de alta compatibilidad. Precio publicado, precio ajustado por metodología ACM y referencia de fuente.`
+        : p===0
+          ? 'Cinco primeros inmuebles del set. Precio publicado, USD/m² calculado y referencia de fuente.'
+          : 'Restantes del set. Posicionamiento del inmueble objeto respecto al conjunto.'
+      const gap = pocos ? (comps.length <= 3 ? '4mm' : '3mm') : '2.5mm'
       html += `<div class="rpt-page" style="background:${_CREAM};position:relative;">
         ${H()}
-        <div style="flex:1;padding:5mm 12mm 14mm;display:flex;flex-direction:column;gap:2.5mm;overflow:hidden;">
+        <div style="flex:1;padding:5mm 12mm 14mm;display:flex;flex-direction:column;gap:${gap};overflow:hidden;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;">
-            <div style="flex:1;">${secTitle('06 · '+sub.toUpperCase(),'Fichas','de comparables.',subtitleText)}</div>
-            <span style="background:${_CREAM};border:1px solid #ddd8cf;border-radius:10mm;padding:1.5mm 4mm;font-size:5.5pt;font-weight:700;color:${_NAV};flex-shrink:0;margin-top:6mm;">· C-${String(from).padStart(2,'0')} — C-${String(to).padStart(2,'0')}</span>
+            <div style="flex:1;">${secTitle('06','Fichas','de comparables.',subtitleText)}</div>
+            <span style="background:${_CREAM};border:1px solid #ddd8cf;border-radius:10mm;padding:1.5mm 4mm;font-size:5.5pt;font-weight:700;color:${_NAV};flex-shrink:0;margin-top:6mm;">· C-${String(from).padStart(2,'0')}${to>from?' — C-'+String(to).padStart(2,'0'):''}</span>
           </div>
-          ${grupo.map((l,idx)=>fichaCard(l,p*perPage+idx+1)).join('')}
+          ${grupo.map((l,idx)=>fichaCard(l,p*perPage+idx+1,pocos)).join('')}
           ${isLast?`
-          <div style="background:${_NAV};border-radius:2.5mm;padding:3mm 5mm;display:flex;align-items:center;justify-content:space-between;margin-top:auto;flex-shrink:0;">
+          <div style="background:${_NAV};border-radius:2.5mm;padding:${pocos?'4mm':'3mm'} 5mm;display:flex;align-items:center;justify-content:space-between;margin-top:auto;flex-shrink:0;">
             <div>
               <p style="font-size:5pt;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.14em;margin:0 0 1mm 0;">Lectura del conjunto</p>
-              <p style="font-size:7pt;color:rgba(255,255,255,.8);margin:0;">El inmueble se posiciona en la <strong style="color:white;">banda media</strong> del set, con USD/m² coherente con la mediana del segmento.</p>
+              <p style="font-size:${pocos?'7.5pt':'7pt'};color:rgba(255,255,255,.8);margin:0;">El inmueble se posiciona en la <strong style="color:white;">banda media</strong> del set, con USD/m² coherente con la mediana del segmento.</p>
             </div>
             <div style="text-align:right;flex-shrink:0;border-left:1px solid rgba(255,255,255,.15);padding-left:5mm;margin-left:5mm;">
               <p style="font-size:5pt;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.14em;margin:0 0 1mm 0;">Valor ACM</p>
-              <p style="font-size:13pt;font-weight:900;color:${_GOLD};margin:0;">${totalVal||'—'}</p>
+              <p style="font-size:${pocos?'16pt':'13pt'};font-weight:900;color:${_GOLD};margin:0;">${totalVal||'—'}</p>
             </div>
           </div>`:''}
         </div>
@@ -2321,40 +2356,63 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     return html
   }
 
-  function fichaCard(l, num) {
-    const m2 = l._areaM2||l.area_m2, pm2 = l._precioM2||l.precio_m2
-    const matchPct = l._score ? Math.min(100,Math.round(l._score*150)) : null
+  function fichaCard(l, num, expandido=false) {
+    const cC  = getCompCons(l)
+    const m2  = cC || l.area_m2
+    const pm2 = l._pm2 || l.precio_m2_cubierta || l.precio_m2
+    const imgH  = expandido ? '36mm' : '26mm'
+    const imgW  = expandido ? '48mm' : '40mm'
     const imgSrc = l.imageDataUrl || l.imagen_url || null
     const shortUrl = l.url_fuente ? l.url_fuente.replace(/^https?:\/\/(www\.)?/,'').split('/').slice(0,2).join('/') : ''
-    return `<div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;overflow:hidden;display:grid;grid-template-columns:40mm 1fr;flex-shrink:0;">
-      <div style="position:relative;overflow:hidden;background:repeating-linear-gradient(45deg,${_CREAM},${_CREAM} 3px,#e5e0d8 3px,#e5e0d8 9px);min-height:26mm;">
+
+    // Score / clasificación badge
+    const clsCfg = { fuerte:{bg:'#dcfce7',c:'#15803d',lbl:'★ Fuerte'}, aceptable:{bg:'#fef9c3',c:'#854d0e',lbl:'✓ Aceptable'}, debil:{bg:'#ffedd5',c:'#c2410c',lbl:'⚡ Débil'}, techo:{bg:'#f3f4f6',c:'#6b7280',lbl:'↑ Techo'} }
+    const cls = l._clasificacion ? clsCfg[l._clasificacion] : null
+    const clsBadge = cls
+      ? `<span style="display:inline-block;font-size:5pt;font-weight:700;color:${cls.c};background:${cls.bg};border:1px solid ${cls.c}40;border-radius:10mm;padding:.4mm 2mm;margin-left:2mm;">${cls.lbl}${l._score?' · '+l._score+'/100':''}</span>` : ''
+
+    // Precio ajustado
+    const ajustadoBlock = expandido && l._precioAjustado && l.precio ? `
+      <div style="display:flex;align-items:baseline;gap:3mm;flex-wrap:wrap;">
+        <span style="font-size:${expandido?'15pt':'14pt'};font-weight:900;color:#9ca3af;line-height:1;text-decoration:line-through;">${fmt.format(l.precio)}</span>
+        <span style="font-size:${expandido?'17pt':'14pt'};font-weight:900;color:${_NAV};line-height:1;">${fmt.format(Math.round(l._precioAjustado))}</span>
+        <span style="font-size:6pt;color:${l._totalAjuste<0?'#dc2626':'#15803d'};font-weight:700;">${l._totalAjuste!=null?(l._totalAjuste>=0?'+':'')+Math.round(l._totalAjuste*100)+'%':''} ajustado</span>
+      </div>` :
+      `<div>
+        <span style="font-size:${expandido?'16pt':'14pt'};font-weight:900;color:${_NAV};line-height:1;">${l.precio?fmt.format(l.precio):'—'}</span>
+        ${pm2?`<span style="font-size:6.5pt;color:#9ca3af;margin-left:2mm;">$${fmtN(Math.round(pm2))}/m²</span>`:''}
+      </div>`
+
+    // Condición detectada
+    const condBadge = l._condicion && l._condicion !== 'usada'
+      ? `<span style="display:inline-block;font-size:5pt;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:10mm;padding:.4mm 2mm;margin-left:2mm;">🔧 ${l._condicion.charAt(0).toUpperCase()+l._condicion.slice(1)}</span>` : ''
+
+    return `<div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;overflow:hidden;display:grid;grid-template-columns:${imgW} 1fr;flex-shrink:0;">
+      <div style="position:relative;overflow:hidden;background:repeating-linear-gradient(45deg,${_CREAM},${_CREAM} 3px,#e5e0d8 3px,#e5e0d8 9px);min-height:${imgH};">
         ${imgSrc
-          ? `<img src="${imgSrc}" style="width:40mm;height:26mm;object-fit:cover;display:block;" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'" /><div style="display:none;width:40mm;height:26mm;align-items:center;justify-content:center;"><span style="font-size:18pt;color:#c9b99a;">⌂</span></div>`
+          ? `<img src="${imgSrc}" style="width:${imgW};height:${imgH};object-fit:cover;display:block;" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'" /><div style="display:none;width:${imgW};height:${imgH};align-items:center;justify-content:center;"><span style="font-size:18pt;color:#c9b99a;">⌂</span></div>`
           : ''}
         <div style="position:absolute;top:2mm;left:2mm;background:${_NAV};border-radius:1mm;padding:.8mm 2mm;">
           <span style="font-size:5.5pt;font-weight:800;color:white;">C-${String(num).padStart(2,'0')}</span>
         </div>
-        ${matchPct!==null?`<div style="position:absolute;bottom:2mm;left:2mm;background:${matchPct>=75?'#1a3a6e':'#374151'};border-radius:1mm;padding:.8mm 2mm;"><span style="font-size:5.5pt;font-weight:700;color:${matchPct>=75?_GOLD:'rgba(255,255,255,.7)'};">MATCH ${matchPct}%</span></div>`:''}
+        ${l._score!=null?`<div style="position:absolute;bottom:2mm;left:2mm;background:${l._score>=85?'#15803d':l._score>=70?'#854d0e':'#374151'};border-radius:1mm;padding:.8mm 2mm;"><span style="font-size:5.5pt;font-weight:700;color:white;">SCORE ${l._score}/100</span></div>`:''}
       </div>
-      <div style="padding:3mm 4mm;display:flex;flex-direction:column;gap:1.5mm;">
+      <div style="padding:${expandido?'3.5mm':'3mm'} 4mm;display:flex;flex-direction:column;gap:${expandido?'2mm':'1.5mm'};">
         <div>
-          <p style="font-size:8pt;font-weight:800;color:${_NAV};margin:0;line-height:1.2;">${(l.titulo||_tipo+' en '+_sector).slice(0,50)}${(l.titulo||'').length>50?'…':''}</p>
+          <p style="font-size:${expandido?'8.5pt':'8pt'};font-weight:800;color:${_NAV};margin:0;line-height:1.25;">${(l.titulo||_tipo+' en '+_sector).slice(0,52)}${(l.titulo||'').length>52?'…':''}${clsBadge}${condBadge}</p>
           <p style="font-size:6pt;color:#9ca3af;margin:.5mm 0 0;">${l.urbanizacion?l.urbanizacion+(l.sector?' — '+l.sector:''):(l.sector||_sector)}</p>
         </div>
-        <div>
-          <span style="font-size:14pt;font-weight:900;color:${_NAV};line-height:1;">${l.precio?fmt.format(l.precio):'—'}</span>
-          ${pm2?`<span style="font-size:6.5pt;color:#9ca3af;margin-left:2mm;">$${fmtN(Math.round(pm2))}/m²</span>`:''}
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1.5mm;">
-          ${[['m²',m2?fmtN(m2):'—'],['Hab.',l.habitaciones||'—'],['Baños',l.banos||'—'],['Parq.',l.parqueos!=null?l.parqueos:'—']].map(([lbl,val])=>`
-          <div style="text-align:center;">
-            <p style="font-size:9pt;font-weight:800;color:#374151;margin:0;line-height:1;">${val}</p>
-            <p style="font-size:4.5pt;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin:.5mm 0 0;">${lbl}</p>
+        ${ajustadoBlock}
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1.5mm;">
+          ${[['m²',m2?fmtN(m2):'—'],['USD/m²',pm2?'$'+fmtN(Math.round(pm2)):'—'],['Hab.',l.habitaciones||'—'],['Baños',l.banos||'—'],['Parq.',l.parqueos!=null?l.parqueos:'—']].map(([lbl,val])=>`
+          <div style="text-align:center;background:${_CREAM};border-radius:1mm;padding:1.5mm 1mm;">
+            <p style="font-size:${expandido?'8pt':'7.5pt'};font-weight:800;color:#374151;margin:0;line-height:1;">${val}</p>
+            <p style="font-size:4.5pt;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:.5mm 0 0;">${lbl}</p>
           </div>`).join('')}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f0ece6;padding-top:1.5mm;">
-          <span style="font-size:5.5pt;color:#9ca3af;">Ficha conjunta</span>
-          ${shortUrl?`<a class="rpt-ext-link" href="${l.url_fuente}" style="font-size:5.5pt;color:#9ca3af;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:48mm;">${shortUrl}</a>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f0ece6;padding-top:${expandido?'2mm':'1.5mm'};">
+          <span style="font-size:5.5pt;color:#9ca3af;">Ficha comparativa</span>
+          ${shortUrl?`<a class="rpt-ext-link" href="${l.url_fuente}" style="font-size:5.5pt;color:#9ca3af;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50mm;">${shortUrl}</a>`:''}
         </div>
       </div>
     </div>`
