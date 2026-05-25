@@ -2542,37 +2542,43 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
         </div>
       </div>
 
-      <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:8mm 16mm 10mm;">
+      <div style="flex:1;display:flex;flex-direction:column;padding:8mm 16mm 10mm;">
 
-        <div style="text-align:center;">
-          <p style="font-size:36pt;font-weight:900;color:white;margin:0;line-height:1;letter-spacing:-.02em;">${firstName}</p>
-          <p style="font-size:32pt;font-weight:700;font-style:italic;font-family:'Playfair Display',serif;color:${_GOLD};margin:0;line-height:1.05;">${lastName}<span style="color:${_GOLD};">.</span></p>
-          <div style="height:.5mm;width:28mm;background:${_GOLD};opacity:.6;margin:4mm auto 0;"></div>
-        </div>
+        <!-- bloque central centrado verticalmente -->
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:10mm;">
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10mm;">
-          <div>
-            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.18em;margin:0 0 5mm 0;">Datos de contacto</p>
-            <div style="display:flex;flex-direction:column;gap:4.5mm;">
-              ${contactRows.map(r=>`
-              <div style="border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:4mm;">
-                <p style="font-size:5.5pt;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.12em;margin:0 0 1.5mm 0;">${r.label}</p>
-                <p style="font-size:10pt;color:white;font-weight:600;margin:0;">${r.value}</p>
-              </div>`).join('')}
+          <div style="text-align:center;">
+            <p style="font-size:36pt;font-weight:900;color:white;margin:0;line-height:1;letter-spacing:-.02em;">${firstName}</p>
+            <p style="font-size:32pt;font-weight:700;font-style:italic;font-family:'Playfair Display',serif;color:${_GOLD};margin:0;line-height:1.05;">${lastName}<span style="color:${_GOLD};">.</span></p>
+            <div style="height:.5mm;width:28mm;background:${_GOLD};opacity:.6;margin:4mm auto 0;"></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10mm;">
+            <div>
+              <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.18em;margin:0 0 5mm 0;">Datos de contacto</p>
+              <div style="display:flex;flex-direction:column;gap:4.5mm;">
+                ${contactRows.map(r=>`
+                <div style="border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:4mm;">
+                  <p style="font-size:5.5pt;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.12em;margin:0 0 1.5mm 0;">${r.label}</p>
+                  <p style="font-size:10pt;color:white;font-weight:600;margin:0;">${r.value}</p>
+                </div>`).join('')}
+              </div>
+            </div>
+            <div>
+              <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.18em;margin:0 0 5mm 0;">Servicios ofrecidos</p>
+              <div style="display:flex;flex-direction:column;gap:4mm;">
+                ${services.map(s=>`
+                <div style="display:flex;align-items:flex-start;gap:3mm;">
+                  <span style="color:${_GOLD};font-size:9pt;flex-shrink:0;line-height:1.4;margin-top:.1mm;">—</span>
+                  <p style="font-size:8.5pt;color:rgba(255,255,255,.85);margin:0;line-height:1.5;">${s}</p>
+                </div>`).join('')}
+              </div>
             </div>
           </div>
-          <div>
-            <p style="font-size:5.5pt;font-weight:700;color:${_GOLD};text-transform:uppercase;letter-spacing:.18em;margin:0 0 5mm 0;">Servicios ofrecidos</p>
-            <div style="display:flex;flex-direction:column;gap:4mm;">
-              ${services.map(s=>`
-              <div style="display:flex;align-items:flex-start;gap:3mm;">
-                <span style="color:${_GOLD};font-size:9pt;flex-shrink:0;line-height:1.4;margin-top:.1mm;">—</span>
-                <p style="font-size:8.5pt;color:rgba(255,255,255,.85);margin:0;line-height:1.5;">${s}</p>
-              </div>`).join('')}
-            </div>
-          </div>
+
         </div>
 
+        <!-- footer pegado abajo -->
         <div style="border-top:1px solid rgba(201,168,76,.4);padding-top:3.5mm;display:flex;justify-content:space-between;align-items:center;">
           <p style="font-size:6pt;color:rgba(255,255,255,.35);margin:0;text-transform:uppercase;letter-spacing:.1em;">${_rptNro} · ${_rptFecha}</p>
           <p style="font-size:6pt;color:rgba(255,255,255,.5);margin:0;font-weight:600;letter-spacing:.05em;">Gracias por su confianza</p>
