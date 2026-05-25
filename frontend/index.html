@@ -1339,32 +1339,53 @@
         : ''
 
       // Borde según clasificación
-      const bordeStyle = esTecho    ? 'border-color:#e5e7eb;opacity:0.7;'
-                       : esVecina   ? 'border-color:#fcd34d;border-width:1.5px;'
-                       : l._clasificacion === 'fuerte' ? 'border-color:#86efac;border-width:1.5px;'
-                       : ''
+      const bordeStyle = esTecho
+        ? 'border-color:#e5e7eb;background:#fafafa;'
+        : esVecina   ? 'border-color:#fcd34d;border-width:1.5px;'
+        : l._clasificacion === 'fuerte' ? 'border-color:#86efac;border-width:1.5px;'
+        : ''
 
       // USD/m² a mostrar: preferir el ajustado
       const pm2Show = l._pm2 || l.precio_m2_cubierta || l.precio_m2
       const areaShow = l._areaM2 || l.area_m2
 
+      // Banner de techo: motivo legible y prominente
+      const motivoIcono = l._motivoTecho
+        ? l._motivoTecho.includes('construcción') || l._motivoTecho.includes('m²') ? '📐'
+        : l._motivoTecho.includes('Dormitorios') || l._motivoTecho.includes('dormitorios') ? '🛏'
+        : l._motivoTecho.includes('Baños') || l._motivoTecho.includes('baños') ? '🚿'
+        : l._motivoTecho.includes('Ajuste') ? '⚖️'
+        : l._motivoTecho.includes('Score') ? '📊'
+        : '⚠️'
+        : '⚠️'
+
+      const techoBanner = esTecho
+        ? `<div style="display:flex;align-items:center;gap:6px;background:#fff3cd;border:1px solid #fde68a;border-radius:8px;padding:5px 10px;margin-bottom:6px;">
+            <span style="font-size:13px;">${motivoIcono}</span>
+            <div>
+              <span style="font-size:10px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.05em;">Excluido del cálculo</span>
+              <span style="font-size:10px;color:#b45309;margin-left:4px;">— ${l._motivoTecho || 'no comparable con el sujeto'}</span>
+            </div>
+           </div>`
+        : ''
+
       return `
       <a href="${l.url_fuente}" target="_blank" rel="noopener" class="card-hover block bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-4" style="${bordeStyle}">
-        ${l.imagen_url ? `<img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block" onerror="this.style.display='none'" />` : ''}
+        ${l.imagen_url ? `<img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block ${esTecho?'opacity-50':''}" onerror="this.style.display='none'" />` : ''}
         <div class="flex-1 min-w-0">
+          ${techoBanner}
           <div class="flex flex-wrap gap-1 mb-1">${badgeVecina}${badgeScore}${badgeRem}</div>
-          <p class="font-semibold text-gray-800 text-sm truncate">${l.titulo || tipo + ' en ' + sector}</p>
-          <p class="text-xs text-gray-500 mt-0.5 truncate">${(urbLabel ? urbLabel + ' · ' : '') + (l.sector || sector)}</p>
-          <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600 items-center">
-            ${l.precio    ? `<span class="font-bold text-brand text-sm">${fmt.format(l.precio)}</span>` : ''}
+          <p class="font-semibold text-sm truncate ${esTecho?'text-gray-400':'text-gray-800'}">${l.titulo || tipo + ' en ' + sector}</p>
+          <p class="text-xs text-gray-400 mt-0.5 truncate">${(urbLabel ? urbLabel + ' · ' : '') + (l.sector || sector)}</p>
+          <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs items-center ${esTecho?'text-gray-400':'text-gray-600'}">
+            ${l.precio    ? `<span class="font-bold text-sm ${esTecho?'text-gray-400':'text-brand'}">${fmt.format(l.precio)}</span>` : ''}
             ${areaShow    ? `<span>${fmtN(areaShow)} m²</span>` : ''}
-            ${pm2Show     ? `<span class="text-gray-400">${fmtM2(pm2Show)}</span>` : ''}
+            ${pm2Show     ? `<span class="${esTecho?'text-gray-300':'text-gray-400'}">${fmtM2(pm2Show)}</span>` : ''}
             ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
             ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
             ${l.parqueos     ? `<span>🚗 ${l.parqueos}</span>` : ''}
           </div>
           ${ajusteLabel ? `<div class="mt-1">${ajusteLabel}</div>` : ''}
-          ${esTecho && l._motivoTecho ? `<p style="font-size:10px;color:#9ca3af;margin-top:3px;">↑ Techo: ${l._motivoTecho}</p>` : ''}
         </div>
         <div class="flex-shrink-0 text-blue-400 self-center">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
