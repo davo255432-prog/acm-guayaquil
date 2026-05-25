@@ -1106,20 +1106,33 @@
                 return
               }
             }
-            // Filtro duro B: baños >+1 respecto al sujeto → techo
+            // Filtro duro B: baños muy diferentes al sujeto (>+1 o <-1) → techo
             const banosInt = parseInt(banos) || 0
-            if (banosInt && comp.banos && comp.banos > banosInt + 1) {
-              comp._clasificacion = 'techo'
-              comp._motivoTecho   = `Baños muy superiores (${comp.banos} vs ${banosInt} del sujeto)`
-              return
+            if (banosInt && comp.banos) {
+              if (comp.banos > banosInt + 1) {
+                comp._clasificacion = 'techo'
+                comp._motivoTecho   = `Baños muy superiores (${comp.banos} vs ${banosInt} del sujeto)`
+                return
+              }
+              if (comp.banos < banosInt - 1) {
+                comp._clasificacion = 'techo'
+                comp._motivoTecho   = `Baños muy inferiores (${comp.banos} vs ${banosInt} del sujeto)`
+                return
+              }
             }
-            // Filtro duro C: dormitorios >+1 respecto al sujeto → techo
-            // Una casa de 6 hab no es comparable con una de 4: producto diferente
+            // Filtro duro C: dormitorios muy diferentes al sujeto (>+1 o <-1) → techo
             const habInt = parseInt(habitaciones) || 0
-            if (habInt && comp.habitaciones && comp.habitaciones > habInt + 1) {
-              comp._clasificacion = 'techo'
-              comp._motivoTecho   = `Dormitorios muy superiores (${comp.habitaciones} vs ${habInt} del sujeto)`
-              return
+            if (habInt && comp.habitaciones) {
+              if (comp.habitaciones > habInt + 1) {
+                comp._clasificacion = 'techo'
+                comp._motivoTecho   = `Dormitorios muy superiores (${comp.habitaciones} vs ${habInt} del sujeto)`
+                return
+              }
+              if (comp.habitaciones < habInt - 1) {
+                comp._clasificacion = 'techo'
+                comp._motivoTecho   = `Dormitorios muy inferiores (${comp.habitaciones} vs ${habInt} del sujeto)`
+                return
+              }
             }
             // Scoring
             comp._score = calcScore(comp, fichaMotor)
