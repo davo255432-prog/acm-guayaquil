@@ -1094,8 +1094,9 @@
           }
           data.forEach(comp => {
             // Filtro duro A: área construcción >35% diferente → techo
-            // Usa area_cubierta_m2 primero; si no existe, area_m2 como fallback
-            const cC = comp.area_cubierta_m2 || comp.area_m2 || null
+            // SOLO usa area_cubierta_m2 — campo específico de construcción
+            // area_m2 NO se usa aquí porque puede contener área de terreno
+            const cC = comp.area_cubierta_m2 || null
             if (areaCons && cC) {
               const delta = Math.abs(cC - areaCons) / areaCons
               if (delta > 0.35) {
@@ -1129,10 +1130,10 @@
               comp._motivoTecho   = `Ajuste total ${Math.round(comp._totalAjuste*100)}% — comparable superior al sujeto`
             } else if (comp._score >= 85) comp._clasificacion = 'fuerte'
             else if  (comp._score >= 70)  comp._clasificacion = 'aceptable'
-            else if  (comp._score >= 55)  comp._clasificacion = 'debil'
+            else if  (comp._score >= 45)  comp._clasificacion = 'debil'
             else {
               comp._clasificacion = 'techo'
-              comp._motivoTecho   = `Score insuficiente (${comp._score}/100)`
+              comp._motivoTecho   = `Baja comparabilidad (${comp._score}/100)`
             }
           })
         }
