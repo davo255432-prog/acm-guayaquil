@@ -1097,7 +1097,8 @@
             // SOLO usa area_cubierta_m2 — campo específico de construcción
             // area_m2 NO se usa aquí porque puede contener área de terreno
             const cC = comp.area_cubierta_m2 || null
-            if (areaCons && cC) {
+            // Filtro A activo solo si areaCons es un valor realista (≥20m²)
+            if (areaCons && areaCons >= 20 && cC) {
               const delta = Math.abs(cC - areaCons) / areaCons
               if (delta > 0.35) {
                 comp._clasificacion = 'techo'
