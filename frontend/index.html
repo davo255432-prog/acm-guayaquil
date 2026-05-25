@@ -1086,10 +1086,11 @@
           const fichaMotor = {
             areaCons, areaTotal,
             habitaciones,
-            banos:    banos    ? parseInt(banos)    : null,
-            parqueos: parqueos ? parseInt(parqueos) : null,
-            urb:      normUrb(urbanizacion),
+            banos:     banos    ? parseInt(banos)    : null,
+            parqueos:  parqueos ? parseInt(parqueos) : null,
+            urb:       normUrb(urbanizacion),
             subzona,
+            condicion: estado || 'usada',   // condición del SUJETO para ajuste relativo A1
           }
           data.forEach(comp => {
             // Filtro duro A: construcción >35% fuera de rango → techo
@@ -1116,7 +1117,7 @@
             // Clasificación final
             if (reclasificar) {
               comp._clasificacion = 'techo'
-              comp._motivoTecho   = `Ajuste total >20% — comparable superior al sujeto`
+              comp._motivoTecho   = `Ajuste total ${Math.round(comp._totalAjuste*100)}% — comparable superior al sujeto`
             } else if (comp._score >= 85) comp._clasificacion = 'fuerte'
             else if  (comp._score >= 70)  comp._clasificacion = 'aceptable'
             else if  (comp._score >= 55)  comp._clasificacion = 'debil'
@@ -1247,10 +1248,17 @@
     sinRes.classList.add('hidden')
 
     const a = _alertaComparables
-    if (!a) {
-      // 10+ comparables compatibles — sin advertencia
+    const confAlt = _stats.confiabilidad === 'ALTA' || _stats.confiabilidad === 'MEDIA-ALTA'
+    if (!a || confAlt) {
+      // Sin alerta de conteo, O la confiabilidad scoring es alta → no mostrar banner rojo
       avisoMin.classList.add('hidden')
       btnWrap.classList.remove('hidden')
+      // Si hay descartados pero confianza alta, mostrar solo nota discreta
+      if (a && confAlt && a.descartados > 0) {
+        avisoMin.classList.remove('hidden')
+        avisoMin.className = 'mt-4 rounded-xl px-4 py-2 text-xs text-gray-500 bg-gray-50 border border-gray-100'
+        avisoMin.innerHTML = `ℹ️ ${a.descartados} propiedad${a.descartados > 1 ? 'es' : ''} de zona cercana excluida${a.descartados > 1 ? 's' : ''} por segmento de precio diferente al sujeto.`
+      }
     } else {
       avisoMin.classList.remove('hidden')
       const descMsg = a.descartados > 0
@@ -2613,16 +2621,33 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     ajustes.negociacion = -0.07
     precio *= 0.93
 
-    // A1 — Remodelación / estreno (detectado del título)
-    const condComp = detectarCondicion(comp)
-    comp._condicion = condComp
-    if (condComp === 'remodelada') {
-      ajustes.remodelacion = -0.10   // alcance desconocido → conservador
-      precio *= 0.90
-    } else if (condComp === 'estreno') {
-      ajustes.remodelacion = -0.18   // estreno vs usada
-      precio *= 0.82
+    // A1 — Condición: ajuste RELATIVO sujeto vs comparable
+    // La dirección depende de quién está en mejor estado
+    const condComp   = detectarCondicion(comp)
+    const condSujeto = ficha.condicion || 'usada'
+    comp._condicion  = condComp
+
+    // Jerarquía de condición: estreno > remodelada > usada > para_remodelar
+    const COND_RANK = { estreno: 3, remodelada: 2, usada: 1, construccion: 1, para_remodelar: 0 }
+    const rankComp   = COND_RANK[condComp]   ?? 1
+    const rankSujeto = COND_RANK[condSujeto] ?? 1
+    const deltaCond  = rankComp - rankSujeto  // positivo: comp mejor; negativo: sujeto mejor
+
+    if (deltaCond === 1) {
+      // comp un escalón mejor → ajustar DOWN
+      // remodelada vs usada: -10%; estreno vs remodelada: -10%
+      ajustes.condicion = -0.10; precio *= 0.90
+    } else if (deltaCond >= 2) {
+      // comp dos escalones mejor (estreno vs usada) → -18%
+      ajustes.condicion = -0.18; precio *= 0.82
+    } else if (deltaCond === -1) {
+      // sujeto un escalón mejor → ajustar comp UP +10%
+      ajustes.condicion = +0.10; precio *= 1.10
+    } else if (deltaCond <= -2) {
+      // sujeto dos escalones mejor (estreno vs usada) → +18%
+      ajustes.condicion = +0.18; precio *= 1.18
     }
+    // deltaCond === 0: misma condición → sin ajuste
 
     // A2 — Diferencia de construcción
     if (cC && ficha.areaCons) {
@@ -2667,7 +2692,9 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     }
 
     const totalAjuste = comp.precio > 0 ? (precio - comp.precio) / comp.precio : 0
-    const reclasificar = Math.abs(totalAjuste) > 0.20 || comp._banosMuySuperiores === true
+    // Reclasificar como techo solo cuando el comparable es SUPERIOR al sujeto (ajuste muy negativo)
+    // Un ajuste positivo grande significa la comp es inferior al sujeto → no es techo, es un piso
+    const reclasificar = totalAjuste < -0.20 || comp._banosMuySuperiores === true
 
     comp._precioAjustado = precio
     comp._totalAjuste    = totalAjuste
