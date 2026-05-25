@@ -1093,13 +1093,14 @@
             condicion: estado || 'usada',   // condición del SUJETO para ajuste relativo A1
           }
           data.forEach(comp => {
-            // Filtro duro A: construcción >35% fuera de rango → techo
-            const cC = getCompCons(comp)
+            // Filtro duro A: área construcción >35% diferente → techo
+            // Usa area_cubierta_m2 primero; si no existe, area_m2 como fallback
+            const cC = comp.area_cubierta_m2 || comp.area_m2 || null
             if (areaCons && cC) {
               const delta = Math.abs(cC - areaCons) / areaCons
               if (delta > 0.35) {
                 comp._clasificacion = 'techo'
-                comp._motivoTecho   = `m² construcción fuera de rango (${Math.round(delta*100)}% diferencia)`
+                comp._motivoTecho   = `m² construcción fuera de rango (${Math.round(delta*100)}% diferencia vs ${areaCons}m² del sujeto)`
                 return
               }
             }
@@ -1108,6 +1109,14 @@
             if (banosInt && comp.banos && comp.banos > banosInt + 1) {
               comp._clasificacion = 'techo'
               comp._motivoTecho   = `Baños muy superiores (${comp.banos} vs ${banosInt} del sujeto)`
+              return
+            }
+            // Filtro duro C: dormitorios >+1 respecto al sujeto → techo
+            // Una casa de 6 hab no es comparable con una de 4: producto diferente
+            const habInt = parseInt(habitaciones) || 0
+            if (habInt && comp.habitaciones && comp.habitaciones > habInt + 1) {
+              comp._clasificacion = 'techo'
+              comp._motivoTecho   = `Dormitorios muy superiores (${comp.habitaciones} vs ${habInt} del sujeto)`
               return
             }
             // Scoring
