@@ -186,16 +186,6 @@
             <input id="area-construccion" type="number" min="1" placeholder="ej. 150"
               class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Precio mínimo (USD) <span class="text-gray-400 font-normal">opcional</span></label>
-            <input id="precio-min" type="number" min="0" placeholder="ej. 80000"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Precio máximo (USD) <span class="text-gray-400 font-normal">opcional</span></label>
-            <input id="precio-max" type="number" min="0" placeholder="ej. 200000"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-          </div>
         </div>
       </div>
 
@@ -943,8 +933,6 @@
     const estado       = document.getElementById('inmueble-estado').value
     const areaTotal    = parseFloat(document.getElementById('area-total').value) || null
     const areaCons     = parseFloat(document.getElementById('area-construccion').value) || null
-    const preMin       = parseFloat(document.getElementById('precio-min').value) || null
-    const preMax       = parseFloat(document.getElementById('precio-max').value) || null
 
     if (!sector || !tipo) { alert('Selecciona sector y tipo de inmueble.'); return }
 
@@ -957,8 +945,6 @@
         let q = db.from('listings').select('*')
           .eq('sector', sector).eq('tipo', tipo).eq('activo', true)
           .order('fecha_scrape', { ascending: false }).limit(200)
-        if (preMin) q = q.gte('precio', preMin)
-        if (preMax) q = q.lte('precio', preMax)
         if (conHab) {
           if (habitaciones) { if (habitaciones >= 4) q = q.gte('habitaciones', 4); else q = q.eq('habitaciones', habitaciones) }
           if (banos) { if (banos >= 3) q = q.gte('banos', 3); else q = q.eq('banos', banos) }
