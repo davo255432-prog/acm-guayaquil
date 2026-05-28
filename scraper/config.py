@@ -1,4 +1,15 @@
 import os
+import pathlib
+
+# Cargar variables desde .env en la raíz del proyecto (un nivel arriba de scraper/)
+_env_path = pathlib.Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    with open(_env_path, encoding="utf-8") as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
@@ -29,9 +40,10 @@ TIPOS = {
     "locales-comerciales":"Local Comercial",
 }
 
-MAX_PAGINAS     = 2   # páginas por sector (conserva créditos)
-MAX_PAGINAS_URB = 1   # 1 página por urbanización es suficiente
-DELAY_SEGUNDOS  = 3
+MAX_PAGINAS          = 2   # páginas por sector (conserva créditos)
+MAX_PAGINAS_URB      = 3   # 3 páginas × ~20 props = ~60 por urb (La Joya tiene 112 en Plusvalía)
+DELAY_SEGUNDOS       = 3
+MAX_ENRIQUECIMIENTO  = 3   # detalles a visitar por página (0 = desactivado)
 TIMEOUT_MS      = 30_000
 
 # Tipos que se scrapeán a nivel de urbanización (los más relevantes para ACM)
@@ -64,10 +76,13 @@ URBANIZACIONES = {
         "los-arrayanes", "buenaventura",
     ],
     "q-leon-febres-cordero": [
-        "la-joya", "volare", "villa-club", "guayacanes",
-        "alborada", "los-vergeles", "miraflores", "brisas-del-norte",
+        # La Joya — búsqueda general + etapas clave por separado
+        "la-joya", "la-joya-aguamarina", "la-joya-quarzo",
+        "la-joya-opalo", "la-joya-turquesa", "la-joya-onix",
+        # Otras urbs del sector
+        "volare", "villa-club",
         "la-rioja", "la-gran-victoria", "el-condado", "vicolinci",
-        "vistana", "portón-del-rio", "la-aurora",
+        "vistana", "la-aurora", "plaza-madeira",
     ],
     "q-narcisa-de-jesus": [
         "metropolis", "ciudad-del-rio", "la-perla",
