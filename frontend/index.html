@@ -1227,22 +1227,27 @@
       confEl.innerHTML = ''
     }
 
+    // Rango técnico Q1–Q3 (más representativo que min–max absolutos)
+    const rangoLabel = (_stats.q1Precio && _stats.q3Precio)
+      ? `${fmt.format(_stats.q1Precio)} – ${fmt.format(_stats.q3Precio)}`
+      : (mn && mx ? `${fmt.format(mn)} – ${fmt.format(mx)}` : '—')
     document.getElementById('stats-grid').innerHTML = [
-      { label: 'Precio promedio', valor: avg ? fmt.format(avg) : '—' },
-      { label: 'Precio mínimo',   valor: mn  ? fmt.format(mn)  : '—' },
-      { label: 'Precio máximo',   valor: mx  ? fmt.format(mx)  : '—' },
-      { label: 'USD/m² ajustado', valor: avgM2 ? fmtM2(avgM2) : '—' },
+      { label: 'Precio promedio',      valor: avg  ? fmt.format(avg)           : '—' },
+      { label: 'Rango técnico Q1–Q3',  valor: rangoLabel },
+      { label: 'USD/m² mediana',       valor: avgM2 ? fmtM2(avgM2)             : '—' },
+      { label: 'Dispersión mercado',   valor: _stats.cv != null ? `${_stats.cv}% CV${_stats.nOutliers ? ` · ${_stats.nOutliers} outlier${_stats.nOutliers>1?'s':''}` : ''}` : '—' },
     ].map(s => `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4"><p class="text-xs text-gray-500 mb-1">${s.label}</p><p class="text-xl font-bold text-gray-800">${s.valor}</p></div>`).join('')
 
     const estWrap = document.getElementById('estimacion-wrap')
     const areaEst = ficha.areaCons  // siempre m² construcción (cubiertos)
+    const metodoLabel = _stats.nOutliers ? `${metodo} · ${_stats.nOutliers} outlier${_stats.nOutliers>1?'s':''} excluido${_stats.nOutliers>1?'s':''}` : metodo
     if (areaEst && avgM2) {
       document.getElementById('estimacion-valor').textContent = fmt.format(areaEst * avgM2)
-      document.getElementById('estimacion-detalle').textContent = `${fmtN(areaEst)} m² construcción × ${fmtM2(avgM2)} · ${metodo}`
+      document.getElementById('estimacion-detalle').textContent = `${fmtN(areaEst)} m² construcción × ${fmtM2(avgM2)} mediana · ${metodoLabel}`
       estWrap.classList.remove('hidden')
     } else if (ficha.areaTotal && avgM2) {
       document.getElementById('estimacion-valor').textContent = fmt.format(ficha.areaTotal * avgM2)
-      document.getElementById('estimacion-detalle').textContent = `${fmtN(ficha.areaTotal)} m² total × ${fmtM2(avgM2)} · ${metodo} ⚠️ sin m² construcción`
+      document.getElementById('estimacion-detalle').textContent = `${fmtN(ficha.areaTotal)} m² total × ${fmtM2(avgM2)} mediana · ${metodoLabel} ⚠️ sin m² construcción`
       estWrap.classList.remove('hidden')
     } else { estWrap.classList.add('hidden') }
 
@@ -1370,11 +1375,16 @@
         ? `<span style="display:inline-block;margin-bottom:3px;margin-left:4px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600;background:#fef3c7;color:#92400e;border:1px solid #fde68a;">${motivoCorto}</span>`
         : ''
 
+      // Badge outlier IQR (distinto al techo: azul pizarra, no afecta metodología)
+      const outlierBadge = l._esOutlier
+        ? `<span style="display:inline-block;margin-bottom:3px;margin-left:4px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;" title="${l._motivoOutlier||''}">📊 Outlier estadístico</span>`
+        : ''
+
       return `
       <a href="${l.url_fuente}" target="_blank" rel="noopener" class="card-hover block bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-4" style="${bordeStyle}">
         ${l.imagen_url ? `<img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block ${esTecho?'opacity-50':''}" onerror="this.style.display='none'" />` : ''}
         <div class="flex-1 min-w-0">
-          <div class="flex flex-wrap gap-1 mb-1">${badgeVecina}${badgeScore}${badgeRem}${techoBadgeMotivo}</div>
+          <div class="flex flex-wrap gap-1 mb-1">${badgeVecina}${badgeScore}${badgeRem}${techoBadgeMotivo}${outlierBadge}</div>
           <p class="font-semibold text-sm truncate ${esTecho?'text-gray-400':'text-gray-800'}">${l.titulo || tipo + ' en ' + sector}</p>
           <p class="text-xs text-gray-400 mt-0.5 truncate">${(urbLabel ? urbLabel + ' · ' : '') + (l.sector || sector)}</p>
           <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs items-center ${esTecho?'text-gray-400':'text-gray-600'}">
@@ -2646,6 +2656,17 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
 
   // ── Utilidades ──
   function prom(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null }
+  function median(arr) {
+    if (!arr.length) return null
+    const s = [...arr].sort((a,b) => a-b)
+    const m = Math.floor(s.length/2)
+    return s.length % 2 ? s[m] : (s[m-1]+s[m])/2
+  }
+  function stdDev(arr) {
+    if (arr.length < 2) return 0
+    const avg = arr.reduce((a,b) => a+b, 0) / arr.length
+    return Math.sqrt(arr.reduce((a,b) => a + (b-avg)**2, 0) / (arr.length-1))
+  }
   function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)) }
   function getCompCons(c) { return c.area_cubierta_m2 || c.area_m2 || null }
   function getCompTerr(c) { return c.area_total_m2   || c.area_m2 || null }
@@ -2820,10 +2841,14 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     const nA = stats.nAceptables || 0
     const nD = stats.nDebiles  || 0
     const nT = stats.nTechos   || 0
-    const total  = nF + nA + nD   // todos los no-techo usados en el análisis
-    const conf   = stats.confiabilidad
-    const avgM2  = stats.avgM2
+    const total    = nF + nA + nD   // todos los no-techo usados en el análisis
+    const conf     = stats.confiabilidad
+    const avgM2    = stats.avgM2
     const areaCons = ficha.areaCons
+    const nOut     = stats.nOutliers || 0
+    const cv       = stats.cv
+    const q1P      = stats.q1Precio
+    const q3P      = stats.q3Precio
 
     const noTechos = (listings || []).filter(l => l._clasificacion !== 'techo' && l._pm2 > 0)
     const avgScore = noTechos.length
@@ -2856,31 +2881,39 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       parrafo1 = `Se identificaron ${total} comparables directos con ${calidadDesc}${avgScore ? ` (score promedio ${avgScore}/100)` : ''}, conformando un universo estadístico robusto.`
     }
 
-    // Posicionamiento top-down entre techo y piso
+    // Párrafo 2: rango técnico Q1–Q3 + outliers + posición del valor estimado
     let parrafo2 = ''
-    if (areaCons && avgM2 && noTechos.length >= 2) {
-      const preciosAj = noTechos.map(l => l._precioAjustado).filter(Boolean)
-      const maxAj = Math.max(...preciosAj)
-      const minAj = Math.min(...preciosAj)
+    if (areaCons && avgM2) {
       const valEst = areaCons * avgM2
-      const techosComp = (listings || []).filter(l => l._clasificacion === 'techo' && l._precioAjustado)
-      const techoPrecio = techosComp.length ? Math.max(...techosComp.map(l => l._precioAjustado)) : null
-      const pisoLabel  = fmt.format(minAj)
-      const techoLabel = techoPrecio ? fmt.format(techoPrecio) : fmt.format(maxAj)
-      parrafo2 = ` El valor estimado de ${fmt.format(valEst)} se posiciona coherentemente entre el techo de mercado ajustado (${techoLabel}) y el piso comparable (${pisoLabel}), validando la consistencia interna del resultado.`
+      const outTxt = nOut > 0
+        ? ` Se excluyeron ${nOut} valor${nOut>1?'es':'r'} atípico${nOut>1?'s':''} por método IQR (fuera del rango técnico del segmento).`
+        : ''
+      if (q1P && q3P) {
+        parrafo2 = `${outTxt} El rango técnico del segmento (Q1–Q3) se sitúa entre ${fmt.format(q1P)} y ${fmt.format(q3P)}. El valor estimado de ${fmt.format(valEst)} se posiciona ${valEst < q1P ? 'en el cuartil inferior — inmueble con ventaja competitiva de precio' : valEst > q3P ? 'en el cuartil superior — inmueble premium dentro del segmento' : 'en la banda central del mercado — precio coherente con la oferta activa'}.`
+      } else {
+        parrafo2 = outTxt ? outTxt : ''
+      }
     }
 
-    // Nivel de confianza
+    // Párrafo 3: confianza + dispersión de mercado
+    const dispTxt = cv != null
+      ? cv <= 10  ? 'mercado homogéneo (baja dispersión de precios)'
+      : cv <= 20  ? 'dispersión de precios moderada, normal para este segmento'
+      : cv <= 30  ? 'dispersión de precios alta — variabilidad significativa entre comparables'
+                  : 'mercado heterogéneo — alta variabilidad, resultado orientativo'
+      : ''
     const CONF_TEXT = {
-      'ALTA':       'Confiabilidad ALTA — presencia de 2 o más comparables Fuertes garantiza solidez estadística del resultado.',
-      'MEDIA-ALTA': 'Confiabilidad MEDIA-ALTA — combinación de comparable Fuerte y Aceptable dentro del estándar mínimo de valoración.',
-      'MEDIA':      'Confiabilidad MEDIA — comparables aceptables disponibles; resultado referencial con margen de variación moderado.',
-      'MEDIA-BAJA': 'Confiabilidad MEDIA-BAJA — datos limitados; resultado orientativo, sujeto a confirmación con datos adicionales.',
+      'ALTA':       'Confiabilidad ALTA — 2 o más comparables Fuertes garantizan solidez estadística.',
+      'MEDIA-ALTA': 'Confiabilidad MEDIA-ALTA — combinación de Fuerte y Aceptable dentro del estándar mínimo (USPAP · IVS).',
+      'MEDIA':      'Confiabilidad MEDIA — comparables aceptables disponibles; resultado referencial con margen moderado.',
+      'MEDIA-BAJA': 'Confiabilidad MEDIA-BAJA — datos limitados; resultado orientativo, sujeto a confirmación.',
       'BAJA':       'Confiabilidad BAJA — mercado con datos muy escasos. Resultado altamente referencial.',
     }
-    const parrafo3 = conf ? ` ${CONF_TEXT[conf] || ''}` : ''
+    const parrafo3 = conf
+      ? ` ${CONF_TEXT[conf] || ''}${dispTxt ? ` (${dispTxt})` : ''}`
+      : ''
 
-    return parrafo1 + parrafo2 + parrafo3
+    return parrafo1 + (parrafo2 ? ' ' + parrafo2 : '') + parrafo3
   }
 
   function calcStats(data) {
@@ -2909,7 +2942,34 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     const sinClasif     = data.filter(l => !l._clasificacion && l._pm2 > 0)
 
     // Pool de cálculo: principales si existen, si no: todos con PM2
-    const pool = principales.length ? principales : sinClasif
+    const poolBase = principales.length ? principales : sinClasif
+
+    // ── Filtro IQR: excluir outliers estadísticos del pool ──────────────────
+    // Se aplica solo si hay ≥4 comparables con pm2 válido
+    let pool = poolBase
+    let nOutliers = 0, q1M2 = null, q3M2 = null, iqrLo = null, iqrHi = null
+    if (poolBase.length >= 4) {
+      const pm2s = poolBase.map(l => l._pm2).filter(v => v > 0).sort((a,b) => a-b)
+      const n = pm2s.length
+      q1M2 = pm2s[Math.floor(n * 0.25)]
+      q3M2 = pm2s[Math.floor(n * 0.75)]
+      const iqr  = q3M2 - q1M2
+      iqrLo = q1M2 - 1.5 * iqr
+      iqrHi = q3M2 + 1.5 * iqr
+      const filtrado = poolBase.filter(l => l._pm2 >= iqrLo && l._pm2 <= iqrHi)
+      const excluidos = poolBase.filter(l => l._pm2 < iqrLo || l._pm2 > iqrHi)
+      // Solo aplicar si quedan ≥2 en el pool (no filtrar en exceso)
+      if (filtrado.length >= 2) {
+        excluidos.forEach(l => {
+          l._esOutlier = true
+          l._motivoOutlier = l._pm2 < iqrLo
+            ? `USD/m² muy bajo para el segmento (${Math.round(l._pm2)} vs piso técnico ${Math.round(iqrLo)})`
+            : `USD/m² muy alto para el segmento (${Math.round(l._pm2)} vs techo técnico ${Math.round(iqrHi)})`
+        })
+        pool = filtrado
+        nOutliers = excluidos.length
+      }
+    }
 
     // ── Nivel de confiabilidad ──
     let confiabilidad, colorConf, iconConf
@@ -2953,11 +3013,31 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       ? `${nPool} comp. · ${fuertes.length}★ fuertes ${aceptables.length}✓ aceptables · ajustado por perito`
       : `${nPool} comparables · promedio ponderado`
 
+    // ── Mediana y coeficiente de variación del pool filtrado ──────────────
+    const pm2Vals   = pool.map(l => l._pm2).filter(v => v > 0)
+    const medianaM2 = median(pm2Vals)
+    const avgM2Calc = calcPm2Ponderado()
+    // Usar mediana como valor principal (más robusto que promedio ponderado)
+    const valorM2   = medianaM2 || avgM2Calc
+    const cv        = pm2Vals.length >= 2
+      ? Math.round(stdDev(pm2Vals) / (medianaM2 || 1) * 100)
+      : null
+
+    // Rango técnico: Q1–Q3 de precios ajustados (no min–max absolutos)
+    const preciosAj = pool.map(l => l._precioAjustado || l.precio).filter(v => v > 0).sort((a,b) => a-b)
+    const q1Precio  = preciosAj.length >= 4 ? preciosAj[Math.floor(preciosAj.length*0.25)] : (preciosAj[0] || null)
+    const q3Precio  = preciosAj.length >= 4 ? preciosAj[Math.floor(preciosAj.length*0.75)] : (preciosAj[preciosAj.length-1] || null)
+
     return {
       avg:           prom(cp.map(l => l.precio)),
       min:           cp.length ? Math.min(...cp.map(l => l.precio)) : null,
       max:           cp.length ? Math.max(...cp.map(l => l.precio)) : null,
-      avgM2:         calcPm2Ponderado(),
+      avgM2:         valorM2,       // Mediana (o promedio ponderado si no hay suficientes)
+      medianaM2,
+      q1M2, q3M2,
+      q1Precio, q3Precio,
+      cv,
+      nOutliers,
       count:         cp.length,
       coreCount:     nPool,
       totalM2Count:  data.filter(l => l._pm2 > 0).length,
