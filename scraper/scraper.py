@@ -22,9 +22,10 @@ from supabase import create_client
 from config import (
     SUPABASE_URL, SUPABASE_KEY,
     SECTORES, TIPOS, URBANIZACIONES, TIPOS_URB,
-    MAX_PAGINAS, MAX_PAGINAS_URB, DELAY_SEGUNDOS,
+    MAX_PAGINAS, MAX_PAGINAS_URB, DELAY_SEGUNDOS, MAX_ENRIQUECIMIENTO,
     build_url, build_url_urb,
 )
+from detalle_propiedad import extraer_detalle_propiedad
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,6 +59,14 @@ HEADERS = {
 # ---------------------------------------------------------------------------
 # Parsers de texto
 # ---------------------------------------------------------------------------
+
+def _to_float(val) -> float | None:
+    """Convierte un valor a float de forma segura; retorna None si falla o si val es falsy."""
+    try:
+        return float(val) if val is not None else None
+    except (ValueError, TypeError):
+        return None
+
 
 def parsear_precio(texto: str) -> float | None:
     if not texto:
@@ -114,7 +123,7 @@ def subir_imagen_supabase(supabase_client, imagen_bytes: bytes, nombre: str, con
         supabase_client.storage.from_("imagenes").upload(
             nombre,
             imagen_bytes,
-            {"contentType": content_type, "upsert": True},
+            {"content-type": content_type, "x-upsert": "true"},
         )
         return f"{SUPABASE_URL}/storage/v1/object/public/imagenes/{nombre}"
     except Exception as e:
@@ -127,7 +136,7 @@ def procesar_imagen(supabase_client, listing: dict, pw_request=None) -> None:
     url_original = listing.get("imagen_url")
     if not url_original:
         return
-    if url_original.startswith(SUPABASE_URL):
+    if listing.get("supabase_imagen_url"):
         return
 
     imagen_bytes, content_type = None, None
@@ -157,7 +166,7 @@ def procesar_imagen(supabase_client, listing: dict, pw_request=None) -> None:
     nombre = hashlib.md5(listing["url_fuente"].encode()).hexdigest() + ext
     url_publica = subir_imagen_supabase(supabase_client, imagen_bytes, nombre, content_type)
     if url_publica:
-        listing["imagen_url"] = url_publica
+        listing["supabase_imagen_url"] = url_publica
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +181,115 @@ _STOP_WORDS = {
     "guayaquil", "guayas", "ecuador", "samborondon", "puntilla",
     "norte", "ceibos", "costa", "salitre", "narcisa", "jesus", "leon",
     "febres", "cordero", "via",
+    # Prefijos de anuncios clasificados en Plusvalía
+    "clasificado", "veclcain", "veclapin", "veclcapa", "veclcoin",
+    "veclocin", "vecltein", "veclcasa", "clasif",
 }
+
+# Mapa keyword → nombre canónico de urbanización
+# Aplica a título del listing cuando la URL no es concluyente
+_KEYWORD_URB = [
+    # Av. León Febres Cordero
+    ("villa club",        "Villa Club"),
+    ("vicolinci",         "Vicolinci"),
+    ("el condado",        "El Condado"),
+    ("condado",           "El Condado"),
+    ("villa nova",        "Villa Nova"),
+    ("villanova",         "Villa Nova"),
+    ("vistana",           "Vistana"),
+    ("porton del rio",    "Portón Del Rio"),
+    ("porton rio",        "Portón Del Rio"),
+    ("portón del río",    "Portón Del Rio"),
+    ("la aurora",         "La Aurora"),
+    ("aurora",            "La Aurora"),
+    ("brisas del norte",  "Brisas Del Norte"),
+    ("la rioja",          "La Rioja"),
+    ("los vergeles",      "Los Vergeles"),
+    ("vergeles",          "Los Vergeles"),
+    ("miraflores",        "Miraflores"),
+    ("alborada",          "Alborada"),
+    ("guayacanes",        "Guayacanes"),
+    ("volare",            "Volare"),
+    ("logare",            "Logare"),
+    ("la joya",           "La Joya"),
+    # Samborondón / La Puntilla
+    ("ciudad celeste",    "Ciudad Celeste"),
+    ("isla celeste",      "Isla Celeste"),
+    ("isla mocoli",       "Isla Mócolí"),
+    ("isla mócolí",       "Isla Mócolí"),
+    ("aires del batan",   "Aires Del Batán"),
+    ("parques del rio",   "Parques Del Rio"),
+    ("parques del río",   "Parques Del Rio"),
+    ("savali",            "Savali"),
+    ("boreal",            "Boreal"),
+    ("terrasol",          "Terrasol"),
+    ("punta barranca",    "Punta Barranca"),
+    ("blue bay",          "Blue Bay"),
+    ("la gran victoria",  "La Gran Victoria"),
+    ("gran victoria",     "La Gran Victoria"),
+    ("bouganville",       "Bouganville"),
+    ("estancias del rio", "Estancias Del Rio"),
+    # Vía a la Costa
+    ("puerto azul",       "Puerto Azul"),
+    ("laguna club",       "Laguna Club"),
+    ("bosquetto",         "Bosquetto"),
+    ("buenaventura",      "Buenaventura"),
+    # Norte Guayaquil
+    ("kennedy",           "Kennedy"),
+    ("la garzota",        "La Garzota"),
+    ("los sauces",        "Los Sauces"),
+    ("colinas del sol",   "Colinas Del Sol"),
+    ("parques del salado","Parques Del Salado"),
+    ("urdesa",            "Urdesa"),
+    ("lomas de urdesa",   "Lomas de Urdesa"),
+    ("los olivos",        "Los Olivos"),
+    ("ceibos norte",      "Ceibos Norte"),
+    ("las cumbres",       "Las Cumbres"),
+    ("santa cecilia",     "Santa Cecilia"),
+    # Vía a la Costa
+    ("portofino",         "Portofino"),
+    ("costalmar",         "Costalmar"),
+    ("alba del bosque",   "Alba Del Bosque"),
+    ("los arrayanes",     "Los Arrayanes"),
+    # Vía a Salitre
+    ("las orquideas",     "Las Orquídeas"),
+    ("orquideas",         "Las Orquídeas"),
+    ("los almendros",     "Los Almendros"),
+    ("villa hermosa",     "Villa Hermosa"),
+    ("mallorca",          "Mallorca Village"),
+    ("arboletta",         "Arboletta"),
+    ("los pinos del rio", "Los Pinos Del Rio"),
+    ("santa maria",       "Santa María Casa Grande"),
+    ("ciudad del sol",    "Ciudad Del Sol"),
+    ("parques del sol",   "Parques Del Sol"),
+    ("los rosales",       "Los Rosales"),
+    ("villa del rey",     "Villa Del Rey"),
+    ("la campina",        "La Campiña"),
+    ("san jose del rio",  "San José Del Rio"),
+    ("portal del rio",    "Portal Del Rio"),
+    ("los cerezos",       "Los Cerezos"),
+    # Narcisa de Jesús
+    ("metropolis",        "Metrópolis"),
+    ("ciudad del rio",    "Ciudad Del Rio"),
+    ("la perla",          "La Perla"),
+    ("acuarela",          "Acuarela Del Rio"),
+    ("paraiso del rio",   "Paraíso Del Rio"),
+    ("victoria del rio",  "Victoria Del Rio"),
+    ("narcisa club",      "Narcisa Club"),
+    ("horizonte dorado",  "Horizonte Dorado"),
+    ("la romareda",       "La Romareda"),
+    # Otros conocidos
+    ("entre rios",        "Entre Ríos"),
+    ("entre río",         "Entre Ríos"),
+    ("los lagos",         "Los Lagos"),
+    ("san bernardo",      "San Bernardo"),
+    ("ciudad millenium",  "Ciudad Millenium"),
+    ("platinium",         "Platinium"),
+    ("platinum",          "Platinium"),
+    ("provenza",          "Provenza"),
+    ("quo",               "Quo"),
+    ("titanium aurora",   "Titanium Aurora"),
+]
 
 
 def extraer_urbanizacion_json(item: dict, sector_nombre: str) -> str | None:
@@ -196,11 +313,27 @@ def extraer_urbanizacion_json(item: dict, sector_nombre: str) -> str | None:
     return None
 
 
+def extraer_urbanizacion_titulo(titulo: str) -> str | None:
+    """Busca keywords de urbanización en el título del listing."""
+    if not titulo:
+        return None
+    t = titulo.lower()
+    for kw, urb in _KEYWORD_URB:
+        if kw in t:
+            return urb
+    return None
+
+
 def extraer_urbanizacion_url(url: str, sector_nombre: str) -> str | None:
     m = re.search(r'/propiedades/(.+?)(?:-\d{5,})?(?:\.html)?$', url)
     if not m:
         return None
     slug = m.group(1)
+
+    # Si la URL es un clasificado, no extraer urb del slug (sería basura)
+    if slug.startswith("clasificado"):
+        return None
+
     stop = _STOP_WORDS | {w.lower() for w in sector_nombre.split()}
     words = [w for w in slug.split("-") if w and w not in stop and not w.isdigit()]
     if len(words) >= 2:
@@ -250,34 +383,63 @@ def parsear_listing_json(item: dict, sector_nombre: str, tipo_nombre: str) -> di
             item.get("precio") or
             (item.get("prices") or {}).get("price")
         )
-        area_raw = (
-            item.get("surface") or
-            item.get("area") or
-            item.get("totalArea") or
-            item.get("coveredArea")
-        )
+        precio = _to_float(precio_raw)
 
-        precio = float(precio_raw) if precio_raw else None
-        area   = float(area_raw)   if area_raw   else None
+        # Extracción separada de áreas
+        area_total    = _to_float(item.get("totalArea") or item.get("surface") or item.get("area"))
+        area_cubierta = _to_float(item.get("coveredArea"))
 
+        # Precios por m² discriminados
+        pm2_total    = round(precio / area_total,    2) if precio and area_total    else None
+        pm2_cubierta = round(precio / area_cubierta, 2) if precio and area_cubierta else None
+
+        # Confianza: 2=ambos tipos, 1=solo uno, 0=ninguno
+        if area_total and area_cubierta:
+            confianza = 2
+        elif area_total or area_cubierta:
+            confianza = 1
+        else:
+            confianza = 0
+
+        # Legacy: cubierta tiene prioridad (más coherente con el ACM)
+        area_legacy = area_cubierta or area_total
+        pm2_legacy  = round(precio / area_legacy, 2) if precio and area_legacy else None
+
+        # Logs [AREA] — visibles con nivel DEBUG
+        if area_total:    log.debug(f"[AREA] totalArea detectada: {area_total}")
+        if area_cubierta: log.debug(f"[AREA] coveredArea detectada: {area_cubierta}")
+        if pm2_total:     log.debug(f"[AREA] precio_m2_total: {pm2_total}")
+        if pm2_cubierta:  log.debug(f"[AREA] precio_m2_cubierta: {pm2_cubierta}")
+        log.debug(f"[AREA] confianza_area: {confianza}")
+
+        titulo_str = str(item.get("title") or item.get("titulo") or "")
         urb = (
             extraer_urbanizacion_json(item, sector_nombre) or
-            extraer_urbanizacion_url(url, sector_nombre)
+            extraer_urbanizacion_url(url, sector_nombre) or
+            extraer_urbanizacion_titulo(titulo_str)
         )
         return {
             "sector":        sector_nombre,
             "tipo":          tipo_nombre,
             "precio":        precio,
-            "area_m2":       area,
-            "precio_m2":     round(precio / area, 2) if precio and area else None,
+            # Legacy (mantener para compatibilidad durante transición)
+            "area_m2":       area_legacy,
+            "precio_m2":     pm2_legacy,
+            # Áreas discriminadas
+            "area_total_m2":      area_total,
+            "area_cubierta_m2":   area_cubierta,
+            "precio_m2_total":    pm2_total,
+            "precio_m2_cubierta": pm2_cubierta,
+            "confianza_area":     confianza,
             "habitaciones":  parsear_entero(str(item.get("rooms", "") or item.get("bedrooms", ""))),
             "banos":         parsear_entero(str(item.get("bathrooms", "") or item.get("banos", ""))),
             "parqueos":      parsear_entero(str(item.get("parking", "") or item.get("garages", ""))),
             "titulo":        str(item.get("title") or item.get("titulo") or "")[:500],
             "direccion":     str(item.get("address") or (item.get("location") or {}).get("label") or "")[:300],
             "url_fuente":    url,
-            "imagen_url":    (str(item.get("photos", [{}])[0].get("url")) if item.get("photos") else None),
-            "urbanizacion":  urb[:200] if urb else None,
+            "imagen_url":          (str(item.get("photos", [{}])[0].get("url")) if item.get("photos") else None),
+            "urbanizacion":        urb[:200] if urb else None,
+            "supabase_imagen_url": None,
         }
     except Exception as e:
         log.debug(f"Error parseando item JSON: {e}")
@@ -366,16 +528,24 @@ def parsear_cards_dom(html: str, sector_nombre: str, tipo_nombre: str) -> list[d
                 "sector":        sector_nombre,
                 "tipo":          tipo_nombre,
                 "precio":        precio,
+                # Legacy (el DOM no distingue tipo de área)
                 "area_m2":       area,
                 "precio_m2":     round(precio / area, 2) if precio and area else None,
+                # Áreas discriminadas — no disponibles en scraping HTML
+                "area_total_m2":      None,
+                "area_cubierta_m2":   None,
+                "precio_m2_total":    None,
+                "precio_m2_cubierta": None,
+                "confianza_area":     0,
                 "habitaciones":  hab,
                 "banos":         banos,
                 "parqueos":      parq,
                 "titulo":        titulo,
                 "direccion":     direccion,
                 "url_fuente":    url,
-                "imagen_url":    imagen_url[:500] or None,
-                "urbanizacion":  extraer_urbanizacion_url(url, sector_nombre),
+                "imagen_url":          imagen_url[:500] or None,
+                "urbanizacion":        (extraer_urbanizacion_url(url, sector_nombre) or extraer_urbanizacion_titulo(titulo)),
+                "supabase_imagen_url": None,
             })
         except Exception as e:
             log.debug(f"Error parseando card: {e}")
@@ -432,6 +602,81 @@ def hay_mas_paginas(html: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Enriquecimiento desde página individual
+# ---------------------------------------------------------------------------
+
+def enriquecer_listing(page, listing: dict) -> None:
+    """
+    Visita la URL individual de una propiedad y completa sus campos de área.
+    Modifica el dict in-place. No guarda en Supabase.
+
+    Campos actualizados en Supabase (existen en schema):
+        area_total_m2, area_cubierta_m2, precio_m2_total, precio_m2_cubierta,
+        confianza_area, banos, parqueos, area_m2 (legacy), precio_m2 (legacy)
+
+    Campos solo logueados (aún no en schema):
+        medio_bano, antiguedad_anios
+    """
+    url = listing.get("url_fuente")
+    if not url:
+        return
+
+    # Skip si ya tiene ambas áreas discriminadas
+    if (listing.get("confianza_area") or 0) >= 2:
+        log.info(f"[DETALLE] Ya confianza_area=2, omitiendo: {url[-60:]}")
+        return
+
+    log.info(f"[DETALLE] Enriqueciendo: {url[-80:]}")
+
+    precio  = listing.get("precio")
+    detalle = extraer_detalle_propiedad(page, url, precio=precio)
+
+    if not detalle:
+        log.warning(f"[DETALLE] Sin datos del detalle para {url[-60:]}")
+        return
+
+    # ── Campos de área discriminada (schema OK) ───────────────────────────
+    at = detalle.get("area_total_m2")
+    ac = detalle.get("area_cubierta_m2")
+    pt = detalle.get("precio_m2_total")
+    pc = detalle.get("precio_m2_cubierta")
+    cf = detalle.get("confianza_area", 0)
+
+    if at is not None:
+        listing["area_total_m2"]    = at
+        log.info(f"[DETALLE] area_total_m2    = {at}")
+    if ac is not None:
+        listing["area_cubierta_m2"] = ac
+        log.info(f"[DETALLE] area_cubierta_m2 = {ac}")
+    if pt is not None:
+        listing["precio_m2_total"]    = pt
+        log.info(f"[DETALLE] precio_m2_total    = {pt}")
+    if pc is not None:
+        listing["precio_m2_cubierta"] = pc
+        log.info(f"[DETALLE] precio_m2_cubierta = {pc}")
+
+    listing["confianza_area"] = cf
+    log.info(f"[DETALLE] confianza_area   = {cf}")
+
+    # ── Legacy: usar área cubierta si existe (schema OK) ──────────────────
+    if ac:
+        listing["area_m2"]   = ac
+        listing["precio_m2"] = pc  # ya calculado en detalle, puede ser None
+
+    # ── Completar banos/parqueos solo si el listing no los tenía ──────────
+    if listing.get("banos") is None and detalle.get("banos") is not None:
+        listing["banos"] = detalle["banos"]
+    if listing.get("parqueos") is None and detalle.get("parqueos") is not None:
+        listing["parqueos"] = detalle["parqueos"]
+
+    # ── Solo log — campos sin columna en schema aún ───────────────────────
+    mb  = detalle.get("medio_bano")
+    ant = detalle.get("antiguedad_anios")
+    if mb  is not None: log.info(f"[DETALLE] medio_bano (solo log)       = {mb}")
+    if ant is not None: log.info(f"[DETALLE] antiguedad_anios (solo log) = {ant}")
+
+
+# ---------------------------------------------------------------------------
 # Guardar en Supabase
 # ---------------------------------------------------------------------------
 
@@ -485,8 +730,16 @@ def main():
                     log.info(f"  Página {pagina}: sin resultados")
                     break
 
+                enriquecidos = 0
                 for listing in listings:
+                    if MAX_ENRIQUECIMIENTO > 0 and enriquecidos < MAX_ENRIQUECIMIENTO:
+                        enriquecer_listing(page, listing)
+                        enriquecidos += 1
+                        time.sleep(DELAY_SEGUNDOS)
                     procesar_imagen(supabase, listing, page.request)
+
+                if MAX_ENRIQUECIMIENTO > 0:
+                    log.info(f"  Enriquecidos: {enriquecidos} de {len(listings)}")
 
                 guardados = guardar_listings(supabase, listings)
                 total_guardados += guardados
@@ -509,7 +762,12 @@ def main():
                     listings = scrape_pagina(page, url, sector_nombre, tipo_nombre, urb_nombre)
                     if not listings:
                         continue
+                    enriquecidos = 0
                     for listing in listings:
+                        if MAX_ENRIQUECIMIENTO > 0 and enriquecidos < MAX_ENRIQUECIMIENTO:
+                            enriquecer_listing(page, listing)
+                            enriquecidos += 1
+                            time.sleep(DELAY_SEGUNDOS)
                         procesar_imagen(supabase, listing)
                     guardados = guardar_listings(supabase, listings)
                     total_guardados += guardados
