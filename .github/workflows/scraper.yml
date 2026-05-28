@@ -15,11 +15,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar dependencias
-        run: pip install -r scraper/requirements.txt
-
-      - name: Instalar Chromium para Playwright
-        run: python -m playwright install chromium --with-deps
+      - name: Instalar dependencias y Chromium
+        run: |
+          pip install --no-cache-dir -r scraper/requirements.txt
+          python -m playwright install chromium --with-deps
 
       - name: Correr scraper
         env:
