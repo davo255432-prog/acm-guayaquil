@@ -29,6 +29,10 @@ SECTORES = {
     "q-leon-febres-cordero":"Av. León Febres Cordero",
     "q-via-a-salitre":      "Vía a Salitre",
     "q-narcisa-de-jesus":   "Narcisa de Jesús",
+    # Búsqueda directa por urb sin filtro de sector (para La Joya, Villa Club, Volare)
+    "q-la-joya":            "Av. León Febres Cordero",
+    "q-villa-club":         "Av. León Febres Cordero",
+    "q-volare":             "Av. León Febres Cordero",
 }
 
 TIPOS = {
