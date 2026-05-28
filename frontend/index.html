@@ -1373,6 +1373,17 @@
       const pm2Show = l._pm2 || l.precio_m2_cubierta || l.precio_m2
       const areaShow = l._areaM2 || l.area_m2
 
+      // Detección: área total parece ser suma de terreno+construcción
+      // Caso común en Plusvalía: vendedor pone terreno+cubierta como "total"
+      const ac = l.area_cubierta_m2
+      const at = l.area_total_m2
+      const posibleSumaError = ac && at && at > ac
+        && (at / ac) >= 1.5 && (at / ac) <= 3.5  // rango sospechoso
+        && (at - ac) >= 80 && (at - ac) <= 200    // diferencia típica de un lote
+      const areaLabel = ac
+        ? `${fmtN(ac)}m² cons${at && at !== ac ? (posibleSumaError ? ` · <span title="El área total podría incluir construcción+terreno sumados" style="color:#d97706;cursor:help;">⚠️ ${fmtN(at)}m² total</span>` : ` · ${fmtN(at)}m² tot`) : ''}`
+        : (areaShow ? `${fmtN(areaShow)}m²` : null)
+
       // Motivo techo: badge compacto inline
       const motivoCorto = l._motivoTecho
         ? l._motivoTecho.includes('construcción') || l._motivoTecho.includes('m²') ? '📐 Área fuera de rango'
@@ -1401,7 +1412,7 @@
           <p class="text-xs text-gray-400 mt-0.5 truncate">${(urbLabel ? urbLabel + ' · ' : '') + (l.sector || sector)}</p>
           <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs items-center ${esTecho?'text-gray-400':'text-gray-600'}">
             ${l.precio    ? `<span class="font-bold text-sm ${esTecho?'text-gray-400':'text-brand'}">${fmt.format(l.precio)}</span>` : ''}
-            ${areaShow    ? `<span>${fmtN(areaShow)} m²</span>` : ''}
+            ${areaLabel   ? `<span>${areaLabel}</span>` : ''}
             ${pm2Show     ? `<span class="${esTecho?'text-gray-300':'text-gray-400'}">${fmtM2(pm2Show)}</span>` : ''}
             ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
             ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
