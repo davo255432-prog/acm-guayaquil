@@ -713,8 +713,12 @@ def main():
     log.info(f"Combinaciones: {len(combinaciones)} ({len(TIPOS)} tipos × {len(SECTORES)} sectores)")
 
     with sync_playwright() as pw:
-        browser = pw.chromium.connect_over_cdp("http://localhost:9222")
-        context = browser.contexts[0] if browser.contexts else browser.new_context()
+        browser = pw.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
+        context = browser.new_context(user_agent=(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ))
         page = context.new_page()
 
         for tipo_slug, sector_key in combinaciones:
