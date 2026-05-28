@@ -333,7 +333,7 @@
     // ══════════════════════════════════════════════════════════════════
 
     'la joya': [
-      { urb: 'volare',         peso: 0.9  }, // frente a La Joya, mismo km, mismo precio/m²
+      { urb: 'volare',         peso: 0.6  }, // Volare ~$107k vs La Joya ~$130k → 20% más barato
       { urb: 'villa club',     peso: 0.85 }, // km 12, mismo segmento medio-alto
       { urb: 'la rioja',       peso: 0.75 }, // km 17, un peldaño abajo en precio
       { urb: 'la aurora',      peso: 0.7  },
@@ -342,15 +342,15 @@
       { urb: 'plaza madeira',  peso: 0.65 }, // km 12-13, $850-1,060/m², adyacente
     ],
     'volare': [
-      { urb: 'la joya',        peso: 0.9  },
-      { urb: 'villa club',     peso: 0.85 },
+      { urb: 'la joya',        peso: 0.6  }, // La Joya ~$130k vs Volare ~$107k → 20% más caro
+      { urb: 'villa club',     peso: 0.6  }, // Villa Club ~$136k vs Volare ~$107k → 25% más caro
       { urb: 'la rioja',       peso: 0.75 },
       { urb: 'la aurora',      peso: 0.7  },
       { urb: 'el condado',     peso: 0.65 },
       { urb: 'plaza madeira',  peso: 0.65 },
     ],
     'villa club': [
-      { urb: 'volare',         peso: 0.9  },
+      { urb: 'volare',         peso: 0.6  }, // Volare ~$107k vs Villa Club ~$136k → 25% más barato
       { urb: 'la joya',        peso: 0.85 },
       { urb: 'la rioja',       peso: 0.75 },
       { urb: 'la aurora',      peso: 0.7  },
@@ -3040,8 +3040,14 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     const pm2Vals   = pool.map(l => l._pm2).filter(v => v > 0)
     const medianaM2 = median(pm2Vals)
     const avgM2Calc = calcPm2Ponderado()
-    // Usar mediana como valor principal (más robusto que promedio ponderado)
-    const valorM2   = medianaM2 || avgM2Calc
+
+    // ── Selección del estimador según mix de comparables ──────────────────
+    // Si hay vecinas mezcladas (nivel 3) → promedio ponderado (respeta pesos de cascada)
+    // Si todos son de la misma urb       → mediana (más robusta, ignora outliers)
+    const hayVecinas = pool.some(l => l._origen === 'vecina')
+    const valorM2    = hayVecinas
+      ? (avgM2Calc || medianaM2)   // ponderado: vecinas pesan menos → valor más cercano a la urb base
+      : (medianaM2 || avgM2Calc)   // mediana pura cuando todo es de la misma urb
     const cv        = pm2Vals.length >= 2
       ? Math.round(stdDev(pm2Vals) / (medianaM2 || 1) * 100)
       : null
