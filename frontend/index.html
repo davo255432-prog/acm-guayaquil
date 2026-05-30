@@ -2794,14 +2794,14 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       // remodelada vs usada: -10%; estreno vs remodelada: -10%
       ajustes.condicion = -0.10; precio *= 0.90
     } else if (deltaCond >= 2) {
-      // comp dos escalones mejor (estreno vs usada) → -18%
-      ajustes.condicion = -0.18; precio *= 0.82
+      // comp dos escalones mejor (estreno vs usada) → -25% → activa reclasificar como techo
+      ajustes.condicion = -0.25; precio *= 0.75
     } else if (deltaCond === -1) {
-      // sujeto un escalón mejor → ajustar comp UP +10%
-      ajustes.condicion = +0.10; precio *= 1.10
+      // sujeto un escalón mejor → ajustar comp UP +12%
+      ajustes.condicion = +0.12; precio *= 1.12
     } else if (deltaCond <= -2) {
-      // sujeto dos escalones mejor (estreno vs usada) → +18%
-      ajustes.condicion = +0.18; precio *= 1.18
+      // sujeto dos escalones mejor (estreno vs usada) → +25%
+      ajustes.condicion = +0.25; precio *= 1.25
     }
     // deltaCond === 0: misma condición → sin ajuste
 
