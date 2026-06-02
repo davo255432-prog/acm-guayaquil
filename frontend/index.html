@@ -2518,7 +2518,7 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     return `<div style="background:white;border:1px solid #ddd8cf;border-radius:2mm;overflow:hidden;display:grid;grid-template-columns:${imgW} 1fr;flex-shrink:0;">
       <div style="position:relative;overflow:hidden;background:repeating-linear-gradient(45deg,${_CREAM},${_CREAM} 3px,#e5e0d8 3px,#e5e0d8 9px);min-height:${imgH};">
         ${imgSrc
-          ? `<img src="${imgSrc}" style="width:${imgW};height:${imgH};object-fit:cover;display:block;" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'" /><div style="display:none;width:${imgW};height:${imgH};align-items:center;justify-content:center;"><span style="font-size:18pt;color:#c9b99a;">⌂</span></div>`
+          ? `<img src="${imgSrc}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'" /><div style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;align-items:center;justify-content:center;"><span style="font-size:18pt;color:#c9b99a;">⌂</span></div>`
           : ''}
         <div style="position:absolute;top:2mm;left:2mm;background:${_NAV};border-radius:1mm;padding:.8mm 2mm;">
           <span style="font-size:5.5pt;font-weight:800;color:white;">C-${String(num).padStart(2,'0')}</span>
