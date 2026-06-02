@@ -324,6 +324,36 @@
   // peso 0.6 = zona adyacente, diferencia de segmento tolerable
   // EXCLUIDOS de LFC/Daule: Ecocity, Villa Italia, Gran Vittoria, Portal del Río (segmento popular incompatible)
   // EXCLUIDOS de Samborondón premium: zonas populares del Salitre
+  // ── Rangos válidos de precio por m² (construcción) por urbanización ──
+  // Fuente: investigación de mercado + calibración con perito (2026-06)
+  // Comps con pm² fuera de este rango son descartados como datos sospechosos
+  const PM2_RANGOS = {
+    // Av. León Febres Cordero
+    'villa club':          { min: 650,  max: 1300 },
+    'la joya':             { min: 600,  max: 1600 }, // amplio por gradiente entre etapas
+    'volare':              { min: 500,  max: 1100 },
+    'la rioja':            { min: 550,  max: 1050 },
+    'la aurora':           { min: 500,  max: 1000 },
+    'el condado':          { min: 500,  max: 1000 },
+    'vicolinci':           { min: 500,  max: 1000 },
+    'vistana':             { min: 550,  max: 1050 },
+    'plaza madeira':       { min: 500,  max: 1000 },
+    'la gran victoria':    { min: 550,  max: 1100 },
+    // Samborondón / La Puntilla
+    'samborondon':         { min: 700,  max: 2500 },
+    'la puntilla':         { min: 700,  max: 2500 },
+    'ciudad celeste':      { min: 700,  max: 2000 },
+    'isla celeste':        { min: 750,  max: 2000 },
+    'parques del rio':     { min: 650,  max: 1800 },
+    // Norte Guayaquil
+    'urdesa':              { min: 600,  max: 1800 },
+    'kennedy':             { min: 550,  max: 1500 },
+    'alborada':            { min: 500,  max: 1300 },
+    'la garzota':          { min: 500,  max: 1200 },
+    // Los Ceibos
+    'los ceibos':          { min: 500,  max: 1200 },
+  }
+
   const VECINOS_URB = {
 
     // ══════════════════════════════════════════════════════════════════
@@ -1081,6 +1111,17 @@
             condicion: estado || 'usada',   // condición del SUJETO para ajuste relativo A1
           }
           data.forEach(comp => {
+            // Filtro duro 0: pm² sospechoso — fuera del rango histórico validado por urb
+            const compUrbNorm = normUrb(comp.urbanizacion || '')
+            const rangoPm2    = PM2_RANGOS[compUrbNorm] || PM2_RANGOS[normUrb(urbanizacion)] || null
+            if (rangoPm2 && comp.precio && comp.area_cubierta_m2 && comp.area_cubierta_m2 >= 20) {
+              const pm2Comp = comp.precio / comp.area_cubierta_m2
+              if (pm2Comp < rangoPm2.min || pm2Comp > rangoPm2.max) {
+                comp._clasificacion = 'techo'
+                comp._motivoTecho   = `pm² sospechoso ($${Math.round(pm2Comp)}/m²) — fuera del rango válido para ${compUrbNorm || 'sector'} ($${rangoPm2.min}–$${rangoPm2.max}/m²)`
+                return
+              }
+            }
             // Filtro duro A: área construcción >35% diferente → techo
             // SOLO usa area_cubierta_m2 — campo específico de construcción
             // area_m2 NO se usa aquí porque puede contener área de terreno
