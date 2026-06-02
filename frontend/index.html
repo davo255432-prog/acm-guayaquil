@@ -1110,15 +1110,39 @@
             subzona,
             condicion: estado || 'usada',   // condición del SUJETO para ajuste relativo A1
           }
+          // ── Filtro dinámico pm²: se auto-ajusta con el mercado ──
+          // Calcula mediana pm² del pool actual → descarta outliers extremos
+          // No requiere mantenimiento: cuando cambia el mercado, cambia la mediana
+          const pm2Pool = data
+            .filter(c => c.precio > 0 && c.area_cubierta_m2 >= 20)
+            .map(c => c.precio / c.area_cubierta_m2)
+            .sort((a, b) => a - b)
+          const pm2Mediana = pm2Pool.length
+            ? pm2Pool[Math.floor(pm2Pool.length / 2)]
+            : null
+          // Rango dinámico: mediana ×0.45 (mín) y ×2.0 (máx)
+          // Ej: si mediana=$900 → válido $405–$1,800 — atrapa solo fraudes/errores graves
+          const pm2DinaMin = pm2Mediana ? pm2Mediana * 0.45 : null
+          const pm2DinaMax = pm2Mediana ? pm2Mediana * 2.00 : null
+
           data.forEach(comp => {
-            // Filtro duro 0: pm² sospechoso — fuera del rango histórico validado por urb
+            // Filtro duro 0a: pm² fuera del rango dinámico del pool actual
+            if (pm2DinaMin && comp.precio && comp.area_cubierta_m2 >= 20) {
+              const pm2Comp = comp.precio / comp.area_cubierta_m2
+              if (pm2Comp < pm2DinaMin || pm2Comp > pm2DinaMax) {
+                comp._clasificacion = 'techo'
+                comp._motivoTecho   = `pm² fuera de rango ($${Math.round(pm2Comp)}/m²) — pool actual: $${Math.round(pm2DinaMin)}–$${Math.round(pm2DinaMax)}/m²`
+                return
+              }
+            }
+            // Filtro duro 0b: pm² fuera del rango absoluto por urb (red de seguridad extrema)
             const compUrbNorm = normUrb(comp.urbanizacion || '')
             const rangoPm2    = PM2_RANGOS[compUrbNorm] || PM2_RANGOS[normUrb(urbanizacion)] || null
             if (rangoPm2 && comp.precio && comp.area_cubierta_m2 && comp.area_cubierta_m2 >= 20) {
               const pm2Comp = comp.precio / comp.area_cubierta_m2
               if (pm2Comp < rangoPm2.min || pm2Comp > rangoPm2.max) {
                 comp._clasificacion = 'techo'
-                comp._motivoTecho   = `pm² sospechoso ($${Math.round(pm2Comp)}/m²) — fuera del rango válido para ${compUrbNorm || 'sector'} ($${rangoPm2.min}–$${rangoPm2.max}/m²)`
+                comp._motivoTecho   = `pm² imposible ($${Math.round(pm2Comp)}/m²) — rango absoluto sector ($${rangoPm2.min}–$${rangoPm2.max}/m²)`
                 return
               }
             }
