@@ -2780,8 +2780,7 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
   function detectarCondicion(comp) {
     const t = (comp.titulo || '').toLowerCase()
     if (/remodelad[ao]|renovad[ao]|remozad[ao]|restaurad[ao]/.test(t)) return 'remodelada'
-    if (/\bestreno\b|estrenar|a\s+estrenar|nueva\s*construcci[oó]n|obra\s+nueva|entrega\s+inmediata|reciente\s+construcci[oó]n/.test(t)) return 'estreno'
-    if (/para\s+remodelar|a\s+remodelar|necesita\s+remodelaci[oó]n/.test(t)) return 'para_remodelar'
+    if (/estreno|nueva\s+construccion|obra\s+nueva|entrega\s+inmediata/.test(t)) return 'estreno'
     return 'usada'
   }
 
