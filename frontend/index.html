@@ -1121,20 +1121,32 @@
             subzona,
             condicion: estado || 'usada',   // condición del SUJETO para ajuste relativo A1
           }
-          // ── Filtro dinámico pm²: se auto-ajusta con el mercado ──
-          // Calcula mediana pm² del pool actual → descarta outliers extremos
-          // No requiere mantenimiento: cuando cambia el mercado, cambia la mediana
-          const pm2Pool = data
-            .filter(c => c.precio > 0 && c.area_cubierta_m2 >= 20)
+          // ── Filtro dinámico pm²: 2 pasadas — mediana sobre pool ya limpio ──
+          // Paso 1: construir pool LIMPIO usando solo registros que pasan PM2_RANGOS absoluto
+          // Así los outliers NO contaminan la mediana y los límites dinámicos son precisos
+          const _urbSujeto = normUrb(urbanizacion)
+          const _rangoPm2Sujeto = PM2_RANGOS[_urbSujeto] || null
+          const pm2PoolLimpio = data
+            .filter(c => {
+              if (!c.precio || !c.area_cubierta_m2 || c.area_cubierta_m2 < 20) return false
+              const _urbC = normUrb(c.urbanizacion || '')
+              const _rango = PM2_RANGOS[_urbC] || _rangoPm2Sujeto || null
+              if (_rango) {
+                const _pm2c = c.precio / c.area_cubierta_m2
+                if (_pm2c < _rango.min || _pm2c > _rango.max) return false // excluir del cálculo
+              }
+              return true
+            })
             .map(c => c.precio / c.area_cubierta_m2)
             .sort((a, b) => a - b)
-          const pm2Mediana = pm2Pool.length
-            ? pm2Pool[Math.floor(pm2Pool.length / 2)]
+          // Paso 2: mediana limpia → límites dinámicos precisos
+          const pm2Mediana = pm2PoolLimpio.length
+            ? pm2PoolLimpio[Math.floor(pm2PoolLimpio.length / 2)]
             : null
-          // Rango dinámico: mediana ×0.45 (mín) y ×2.0 (máx)
-          // Ej: si mediana=$900 → válido $405–$1,800 — atrapa solo fraudes/errores graves
+          // Rango dinámico: mediana ×0.45 (mín) y ×1.80 (máx) — más estricto que antes
+          // Ej: mediana=$900 → válido $405–$1,620 — outliers tipo $1,881 o $281 quedan fuera
           const pm2DinaMin = pm2Mediana ? pm2Mediana * 0.45 : null
-          const pm2DinaMax = pm2Mediana ? pm2Mediana * 2.00 : null
+          const pm2DinaMax = pm2Mediana ? pm2Mediana * 1.80 : null
 
           data.forEach(comp => {
             // Filtro duro 0a: pm² fuera del rango dinámico del pool actual
