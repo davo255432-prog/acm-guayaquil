@@ -1099,6 +1099,17 @@
 
         data = [...dUrb, ...dVec]
 
+        // ── Pre-filtro: eliminar datos imposibles ANTES de entrar al pool ──
+        // Estos registros tienen datos corruptos/erróneos — no deben aparecer
+        data = data.filter(c => {
+          if (c.banos        && c.banos        >  7)  return false // imposible: 8+ baños residencial
+          if (c.habitaciones && c.habitaciones > 10)  return false // imposible: 10+ dormitorios
+          if (c.precio       && c.precio       < 15000) return false // imposible: <$15k
+          if (c.precio       && c.precio       > 5000000) return false // imposible: >$5M residencial
+          if (c.area_cubierta_m2 && c.area_cubierta_m2 > 2000) return false // imposible: >2000m² cubierta
+          return true
+        })
+
         // ── MOTOR ACM v2: Scoring, Ajustes Técnicos, Clasificación ──
         if (data.length > 0 && (areaCons || banos || habitaciones)) {
           const fichaMotor = {
