@@ -1100,13 +1100,20 @@
         data = [...dUrb, ...dVec]
 
         // ── Pre-filtro: eliminar datos imposibles ANTES de entrar al pool ──
-        // Estos registros tienen datos corruptos/erróneos — no deben aparecer
+        // Incluye pm² claramente fuera del rango absoluto del sector del sujeto
+        // Así nunca contaminan la mediana ni aparecen como comparables ni en PDF
+        const _rangoPm2Pre = PM2_RANGOS[normUrb(urbanizacion)] || null
         data = data.filter(c => {
           if (c.banos        && c.banos        >  7)  return false // imposible: 8+ baños residencial
           if (c.habitaciones && c.habitaciones > 10)  return false // imposible: 10+ dormitorios
           if (c.precio       && c.precio       < 15000) return false // imposible: <$15k
           if (c.precio       && c.precio       > 5000000) return false // imposible: >$5M residencial
           if (c.area_cubierta_m2 && c.area_cubierta_m2 > 2000) return false // imposible: >2000m² cubierta
+          // pm² fuera del rango absoluto del sector del sujeto → dato corrupto
+          if (_rangoPm2Pre && c.precio && c.area_cubierta_m2 && c.area_cubierta_m2 >= 20) {
+            const _pm2 = c.precio / c.area_cubierta_m2
+            if (_pm2 < _rangoPm2Pre.min || _pm2 > _rangoPm2Pre.max) return false
+          }
           return true
         })
 
@@ -1121,32 +1128,19 @@
             subzona,
             condicion: estado || 'usada',   // condición del SUJETO para ajuste relativo A1
           }
-          // ── Filtro dinámico pm²: 2 pasadas — mediana sobre pool ya limpio ──
-          // Paso 1: construir pool LIMPIO usando solo registros que pasan PM2_RANGOS absoluto
-          // Así los outliers NO contaminan la mediana y los límites dinámicos son precisos
-          const _urbSujeto = normUrb(urbanizacion)
-          const _rangoPm2Sujeto = PM2_RANGOS[_urbSujeto] || null
-          const pm2PoolLimpio = data
-            .filter(c => {
-              if (!c.precio || !c.area_cubierta_m2 || c.area_cubierta_m2 < 20) return false
-              const _urbC = normUrb(c.urbanizacion || '')
-              const _rango = PM2_RANGOS[_urbC] || _rangoPm2Sujeto || null
-              if (_rango) {
-                const _pm2c = c.precio / c.area_cubierta_m2
-                if (_pm2c < _rango.min || _pm2c > _rango.max) return false // excluir del cálculo
-              }
-              return true
-            })
+          // ── Filtro dinámico pm²: mediana del pool (ya limpio por pre-filtro) ──
+          // Pool ya no tiene outliers extremos → mediana es precisa sin necesidad de 2 pasadas
+          const pm2Pool = data
+            .filter(c => c.precio > 0 && c.area_cubierta_m2 >= 20)
             .map(c => c.precio / c.area_cubierta_m2)
             .sort((a, b) => a - b)
-          // Paso 2: mediana limpia → límites dinámicos precisos
-          const pm2Mediana = pm2PoolLimpio.length
-            ? pm2PoolLimpio[Math.floor(pm2PoolLimpio.length / 2)]
+          const pm2Mediana = pm2Pool.length
+            ? pm2Pool[Math.floor(pm2Pool.length / 2)]
             : null
-          // Rango dinámico: mediana ×0.45 (mín) y ×1.80 (máx) — más estricto que antes
-          // Ej: mediana=$900 → válido $405–$1,620 — outliers tipo $1,881 o $281 quedan fuera
+          // Rango dinámico: mediana ×0.45 (mín) y ×2.0 (máx)
+          // Segunda capa de seguridad sobre el pre-filtro absoluto
           const pm2DinaMin = pm2Mediana ? pm2Mediana * 0.45 : null
-          const pm2DinaMax = pm2Mediana ? pm2Mediana * 1.80 : null
+          const pm2DinaMax = pm2Mediana ? pm2Mediana * 2.00 : null
 
           data.forEach(comp => {
             // Filtro duro 0a: pm² fuera del rango dinámico del pool actual
