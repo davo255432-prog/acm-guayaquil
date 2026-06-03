@@ -2932,9 +2932,7 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     const totalAjuste = comp.precio > 0 ? (precio - comp.precio) / comp.precio : 0
     // Reclasificar como techo solo cuando el comparable es SUPERIOR al sujeto (ajuste muy negativo)
     // Un ajuste positivo grande significa la comp es inferior al sujeto → no es techo, es un piso
-    // -0.35 = espacio para: -7% negociación + -25% condición (2 escalones) + ajustes menores
-    // -0.20 era correcto cuando no había ajuste de condición (todos los comps = 'usada')
-    const reclasificar = totalAjuste < -0.35 || comp._banosMuySuperiores === true
+    const reclasificar = totalAjuste < -0.20 || comp._banosMuySuperiores === true
 
     comp._precioAjustado = precio
     comp._totalAjuste    = totalAjuste
