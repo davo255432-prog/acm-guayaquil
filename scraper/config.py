@@ -94,6 +94,7 @@ URBANIZACIONES = {
         "narcisa-club", "horizonte-dorado", "la-romareda",
     ],
     "q-via-a-salitre": [
+        "napoli",
         "las-orquideas", "los-almendros", "villa-hermosa",
         "la-gran-victoria", "la-rioja", "savali", "mallorca-village",
         "arboletta", "los-pinos-del-rio", "santa-maria-casa-grande",

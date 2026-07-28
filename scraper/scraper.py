@@ -13,6 +13,7 @@ import json
 import logging
 import re
 import time
+import unicodedata
 
 import httpx
 from playwright.sync_api import sync_playwright
@@ -582,6 +583,17 @@ def scrape_pagina(page, url: str, sector_nombre: str, tipo_nombre: str, urbaniza
         results = [r for r in resultados if r]
     else:
         results = parsear_cards_dom(html, sector_nombre, tipo_nombre)
+
+    # Napoli se valida de forma aislada para evitar etiquetar como exactos
+    # resultados generales devueltos por el portal.
+    if urbanizacion and unicodedata.normalize("NFD", urbanizacion).encode("ascii", "ignore").decode().lower() == "napoli":
+        def es_napoli(r: dict) -> bool:
+            texto = " ".join(str(r.get(c) or "") for c in (
+                "urbanizacion", "titulo", "direccion", "url_fuente"
+            ))
+            texto = unicodedata.normalize("NFD", texto).encode("ascii", "ignore").decode().lower()
+            return "napoli" in texto
+        results = [r for r in results if es_napoli(r)]
 
     # Si venimos de una búsqueda por urbanización, la inyectamos directamente
     if urbanizacion:
