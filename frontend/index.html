@@ -362,6 +362,18 @@
     // Grupo B (medio $800-1,100/m²): La Rioja, La Aurora, El Condado, Vicolinci, Vistana, Plaza Madeira
     // ══════════════════════════════════════════════════════════════════
 
+    // Napoli — configuración aislada. No altera cascadas previamente validadas.
+    // Corredor Vía a Salitre: primero similitud de producto, luego cercanía física.
+    'napoli': [
+      { urb: 'ciudad del valle', peso: 0.85 },
+      { urb: 'la joya',          peso: 0.8  },
+      { urb: 'villa club',       peso: 0.75 },
+      { urb: 'vicolinci',        peso: 0.7  },
+      { urb: 'arboletta',        peso: 0.6  },
+      { urb: 'compostela',       peso: 0.5  },
+      { urb: 'malaga ii',        peso: 0.4  },
+    ],
+
     'la joya': [
       { urb: 'volare',         peso: 0.6  }, // Volare ~$107k vs La Joya ~$130k → 20% más barato
       { urb: 'villa club',     peso: 0.85 }, // km 12, mismo segmento medio-alto
@@ -872,6 +884,16 @@
       .trim()
   }
 
+  function esCoincidenciaNapoli(listing) {
+    const texto = [
+      listing?.urbanizacion,
+      listing?.titulo,
+      listing?.direccion,
+      listing?.url_fuente,
+    ].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    return texto.includes('napoli')
+  }
+
   const fmt   = new Intl.NumberFormat('es-EC', { style:'currency', currency:'USD', maximumFractionDigits:0 })
   const fmtN  = v => new Intl.NumberFormat('es-EC', { maximumFractionDigits:0 }).format(v)
   const fmtM2 = v => `${fmtN(v)} USD/m²`
@@ -1058,8 +1080,14 @@
             )
             const fnData = await fnResp.json()
             if (fnData.listings && fnData.listings.length > 0) {
-              dUrb = fnData.listings; faUrb = 'completos'; nivelUsado = 2
-              fnData.listings.forEach(l => urbIds.add(l.id))
+              const esNapoli = urbanizacion.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() === 'napoli'
+              const listingsValidados = esNapoli
+                ? fnData.listings.filter(esCoincidenciaNapoli)
+                : fnData.listings
+              if (listingsValidados.length > 0) {
+                dUrb = listingsValidados; faUrb = 'completos'; nivelUsado = 2
+                listingsValidados.forEach(l => urbIds.add(l.id))
+              }
             }
           } catch (e) { console.warn('Edge Function error:', e) }
           finally { document.getElementById('loader-msg')?.remove() }
