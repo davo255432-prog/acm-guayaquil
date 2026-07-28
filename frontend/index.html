@@ -363,15 +363,17 @@
     // ══════════════════════════════════════════════════════════════════
 
     // Napoli — configuración aislada. No altera cascadas previamente validadas.
-    // Corredor Vía a Salitre: primero similitud de producto, luego cercanía física.
+    // Corredor Vía a Salitre: primero similitud de producto y precio, luego cercanía.
     'napoli': [
-      { urb: 'ciudad del valle', peso: 0.85 },
-      { urb: 'la joya',          peso: 0.8  },
-      { urb: 'villa club',       peso: 0.75 },
-      { urb: 'vicolinci',        peso: 0.7  },
-      { urb: 'arboletta',        peso: 0.6  },
-      { urb: 'compostela',       peso: 0.5  },
-      { urb: 'malaga ii',        peso: 0.4  },
+      { urb: 'mallorca village', peso: 0.9  },
+      { urb: 'milan',            peso: 0.8  }, // cubre Milán y Milann
+      { urb: 'ciudad del valle', peso: 0.7  },
+      {
+        urb: 'ciudad celeste',
+        peso: 0.6,
+        etapas: ['cristalina', 'la ria'], // solo etapas medias compatibles
+      },
+      { urb: 'logare',            peso: 0.55 }, // cubre Logare y L'Ogare
     ],
 
     'la joya': [
@@ -894,6 +896,17 @@
     return texto.includes('napoli')
   }
 
+  function textoNormalizadoListing(listing) {
+    return [
+      listing?.urbanizacion,
+      listing?.titulo,
+      listing?.direccion,
+      listing?.url_fuente,
+    ].filter(Boolean).join(' ')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+  }
+
   const fmt   = new Intl.NumberFormat('es-EC', { style:'currency', currency:'USD', maximumFractionDigits:0 })
   const fmtN  = v => new Intl.NumberFormat('es-EC', { maximumFractionDigits:0 }).format(v)
   const fmtM2 = v => `${fmtN(v)} USD/m²`
@@ -1112,7 +1125,15 @@
               const buscarV = (conHab, conParq) => baseQuery(conHab, conParq).or(orV)
               const { data: dV } = await buscarConRelajacion(buscarV)
               if (!dV || !dV.length) continue
-              const nuevos = dV.filter(l => !urbIds.has(l.id))
+              const candidatosEtapa = vecDef.etapas?.length
+                ? dV.filter(l => {
+                    const texto = textoNormalizadoListing(l)
+                    return vecDef.etapas.some(etapa => texto.includes(
+                      etapa.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+                    ))
+                  })
+                : dV
+              const nuevos = candidatosEtapa.filter(l => !urbIds.has(l.id))
               const compat = filtrarPrecioCompatible(nuevos, pRef)
               // Mismas habitaciones exactas
               const conHab = habitaciones ? compat.filter(l => l.habitaciones === habitaciones) : compat
