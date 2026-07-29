@@ -943,24 +943,47 @@
   }
 
   function deduplicarComparables(listings) {
-    const vistos = new Map()
+    const unicos = []
+    const normalizarUrl = url => (url || '').split('?')[0].replace(/\/+$/, '').toLowerCase()
+    const calidad = l => [
+      l.area_cubierta_m2, l.area_total_m2, l.banos, l.parqueos, l.imagen_url,
+      l.direccion, l.url_fuente,
+    ].filter(v => v !== null && v !== undefined && v !== '').length
+
     for (const listing of listings) {
       const titulo = textoNormalizadoListing({ titulo: listing.titulo || '' })
-        .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140)
+        .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+      const url = normalizarUrl(listing.url_fuente)
+      const imagen = normalizarUrl(listing.imagen_url)
+      const precio = Math.round(listing.precio || 0)
       const area = Math.round(getCompCons(listing) || getCompTerr(listing) || 0)
-      const clave = `${Math.round(listing.precio || 0)}|${area}|${listing.habitaciones || 0}|${titulo}`
-      const anterior = vistos.get(clave)
-      if (!anterior) {
-        vistos.set(clave, listing)
+      const urb = normUrb(listing._urbOrigen || listing.urbanizacion || '')
+
+      const indice = unicos.findIndex(anterior => {
+        const tituloAnterior = textoNormalizadoListing({ titulo: anterior.titulo || '' })
+          .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+        const urlAnterior = normalizarUrl(anterior.url_fuente)
+        const imagenAnterior = normalizarUrl(anterior.imagen_url)
+        const precioAnterior = Math.round(anterior.precio || 0)
+        const areaAnterior = Math.round(getCompCons(anterior) || getCompTerr(anterior) || 0)
+        const urbAnterior = normUrb(anterior._urbOrigen || anterior.urbanizacion || '')
+
+        if (url && urlAnterior && url === urlAnterior) return true
+        if (imagen && imagenAnterior && imagen === imagenAnterior && precio === precioAnterior) return true
+        if (!precio || precio !== precioAnterior) return false
+        if (titulo.slice(0, 90) && titulo.slice(0, 90) === tituloAnterior.slice(0, 90)) return true
+        return urb === urbAnterior && Math.abs(area - areaAnterior) <= 2 &&
+          titulo.slice(0, 55) && titulo.slice(0, 55) === tituloAnterior.slice(0, 55)
+      })
+
+      if (indice < 0) {
+        unicos.push(listing)
         continue
       }
-      // Conservar la ficha técnicamente más completa.
-      const calidad = l => [
-        l.area_cubierta_m2, l.area_total_m2, l.banos, l.parqueos, l.imagen_url,
-      ].filter(v => v !== null && v !== undefined && v !== '').length
-      if (calidad(listing) > calidad(anterior)) vistos.set(clave, listing)
+      // Conservar la ficha técnicamente más completa entre copias del anuncio.
+      if (calidad(listing) > calidad(unicos[indice])) unicos[indice] = listing
     }
-    return [...vistos.values()]
+    return unicos
   }
 
   const fmt   = new Intl.NumberFormat('es-EC', { style:'currency', currency:'USD', maximumFractionDigits:0 })
