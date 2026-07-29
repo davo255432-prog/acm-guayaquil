@@ -3214,12 +3214,24 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
 
   function calcStats(data) {
     const cp = data.filter(l => l.precio > 0)
+    const analisisNapoli = normUrb(_urb) === 'napoli'
 
     // USD/m² por comparable: preferir precio ajustado / m² construcción
     data.forEach(l => {
       const cC = getCompCons(l)
       if (l._precioAjustado && cC) {
-        l._pm2 = l._precioAjustado / cC
+        let precioParaPm2 = l._precioAjustado
+        if (analisisNapoli) {
+          // En Napoli el universo exacto contiene muchas casas de 113–120 m².
+          // Los ajustes de construcción/terreno homologan el PRECIO TOTAL hacia
+          // el sujeto; conservarlos al volver a dividir por el área del comparable
+          // contabilizaría el tamaño dos veces e inflaría el USD/m².
+          const adjCons = l._ajustes?.construccion
+          const adjTerr = l._ajustes?.terreno
+          if (adjCons) precioParaPm2 /= (1 + adjCons)
+          if (adjTerr) precioParaPm2 /= (1 + adjTerr)
+        }
+        l._pm2 = precioParaPm2 / cC
       } else {
         l._pm2 = l.precio_m2_cubierta || l.precio_m2 || null
       }
