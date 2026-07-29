@@ -1562,7 +1562,7 @@
         btnWrap.classList.add('hidden')
       }
     }
-    lista.innerHTML = listings.slice(0, 50).map(l => {
+    lista.innerHTML = listings.slice(0, 50).map((l, compIndex) => {
       const esVecina  = l._origen === 'vecina'
       const esTecho   = l._clasificacion === 'techo'
       const urbLabel  = l.urbanizacion || ''
@@ -1647,30 +1647,38 @@
       const outlierBadge = l._esOutlier
         ? `<span style="display:inline-block;margin-bottom:3px;margin-left:4px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;" title="${l._motivoOutlier||''}">📊 Outlier estadístico</span>`
         : ''
+      const imgSrc = l.imageDataUrl || l.imagen_url || ''
 
       return `
-      <a href="${l.url_fuente}" target="_blank" rel="noopener" class="card-hover block bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex gap-4" style="${bordeStyle}">
-        ${l.imagen_url ? `<img src="${l.imagen_url}" alt="" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 hidden sm:block ${esTecho?'opacity-50':''}" onerror="this.style.display='none'" />` : ''}
-        <div class="flex-1 min-w-0">
-          <div class="flex flex-wrap gap-1 mb-1">${badgeVecina}${badgeScore}${badgeRem}${techoBadgeMotivo}${outlierBadge}</div>
-          <p class="font-semibold text-sm truncate ${esTecho?'text-gray-400':'text-gray-800'}">${l.titulo || tipo + ' en ' + sector}</p>
-          <p class="text-xs text-gray-400 mt-0.5 truncate">${(urbLabel ? urbLabel + ' · ' : '') + (l.sector || sector)}</p>
-          <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs items-center ${esTecho?'text-gray-400':'text-gray-600'}">
-            ${l.precio    ? `<span class="font-bold text-sm ${esTecho?'text-gray-400':'text-brand'}">${fmt.format(l.precio)}</span>` : ''}
-            ${areaLabel   ? `<span>${areaLabel}</span>` : ''}
-            ${pm2Show     ? `<span class="${esTecho?'text-gray-300':'text-gray-400'}">${fmtM2(pm2Show)}</span>` : ''}
-            ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
-            ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
-            ${l.parqueos     ? `<span>🚗 ${l.parqueos}</span>` : ''}
-            ${l._amenidades?.piscina === 'si' ? '<span title="Piscina declarada">🏊 Piscina</span>' : ''}
-            ${l._amenidades?.servicio === 'si' ? '<span title="Dormitorio de servicio declarado">🧹 Servicio</span>' : ''}
+      <div class="card-hover bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden" style="${bordeStyle}" data-comp-card="${compIndex}">
+        <div class="p-4 flex gap-4">
+          <img data-comp-img="${compIndex}" src="${imgSrc}" alt="Captura del comparable" class="w-24 h-20 object-cover rounded-lg flex-shrink-0 sm:block ${imgSrc?'':'hidden'} ${esTecho?'opacity-50':''}" onerror="this.style.display='none'" />
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap gap-1 mb-1">${badgeVecina}${badgeScore}${badgeRem}${techoBadgeMotivo}${outlierBadge}</div>
+            <p class="font-semibold text-sm truncate ${esTecho?'text-gray-400':'text-gray-800'}">${l.titulo || tipo + ' en ' + sector}</p>
+            <p class="text-xs text-gray-400 mt-0.5 truncate">${(urbLabel ? urbLabel + ' · ' : '') + (l.sector || sector)}</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs items-center ${esTecho?'text-gray-400':'text-gray-600'}">
+              ${l.precio    ? `<span class="font-bold text-sm ${esTecho?'text-gray-400':'text-brand'}">${fmt.format(l.precio)}</span>` : ''}
+              ${areaLabel   ? `<span>${areaLabel}</span>` : ''}
+              ${pm2Show     ? `<span class="${esTecho?'text-gray-300':'text-gray-400'}">${fmtM2(pm2Show)}</span>` : ''}
+              ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
+              ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
+              ${l.parqueos     ? `<span>🚗 ${l.parqueos}</span>` : ''}
+              ${l._amenidades?.piscina === 'si' ? '<span title="Piscina declarada">🏊 Piscina</span>' : ''}
+              ${l._amenidades?.servicio === 'si' ? '<span title="Dormitorio de servicio declarado">🧹 Servicio</span>' : ''}
+            </div>
+            ${ajusteLabel ? `<div class="mt-1">${ajusteLabel}</div>` : ''}
           </div>
-          ${ajusteLabel ? `<div class="mt-1">${ajusteLabel}</div>` : ''}
         </div>
-        <div class="flex-shrink-0 text-blue-400 self-center">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        <div class="px-4 py-2 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-end gap-3 text-xs">
+          ${l.url_fuente ? `<a href="${l.url_fuente}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 font-medium">↗ Abrir anuncio</a>` : ''}
+          <label class="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">
+            📷 ${imgSrc ? 'Cambiar captura' : 'Agregar captura'}
+            <input type="file" accept="image/*" class="hidden" data-comp-captura="${compIndex}" />
+          </label>
+          <span data-comp-estado="${compIndex}" class="text-green-700 ${imgSrc?'':'hidden'}">✓ Imagen lista para PDF</span>
         </div>
-      </a>`
+      </div>`
     }).join('')
   }
 
@@ -1680,6 +1688,31 @@
     fr.onload  = () => res(fr.result)
     fr.onerror = rej
     fr.readAsDataURL(blob)
+  })
+
+  document.getElementById('lista-comparables').addEventListener('change', async event => {
+    const input = event.target.closest('input[data-comp-captura]')
+    if (!input || !input.files?.[0]) return
+    const indice = Number(input.dataset.compCaptura)
+    const listing = _listings[indice]
+    if (!listing) return
+
+    const archivo = input.files[0]
+    if (!archivo.type.startsWith('image/')) {
+      input.value = ''
+      return
+    }
+
+    listing.imageDataUrl = await _blobToDataUrl(archivo)
+    const img = document.querySelector(`[data-comp-img="${indice}"]`)
+    const estado = document.querySelector(`[data-comp-estado="${indice}"]`)
+    if (img) {
+      img.src = listing.imageDataUrl
+      img.style.display = ''
+      img.classList.remove('hidden')
+    }
+    if (estado) estado.classList.remove('hidden')
+    input.closest('label').childNodes[0].textContent = '📷 Cambiar captura'
   })
 
   async function capturarImagenesPreview(comps) {
