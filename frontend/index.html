@@ -254,6 +254,9 @@
           <button id="btn-preliminar-pdf" class="font-semibold px-6 py-3 rounded-lg text-sm transition-colors border border-white/40 text-white bg-white/10 hover:bg-white/20">
             Descargar comparables preliminares
           </button>
+          <button id="btn-vista-pdf" class="font-semibold px-6 py-3 rounded-lg text-sm transition-colors border border-white/40 text-white bg-white/10 hover:bg-white/20">
+            Exportar vista actual en PDF
+          </button>
           <button id="btn-generar-informe" class="font-semibold px-6 py-3 rounded-lg text-sm transition-colors text-white" style="background:#c9a84c">
             Generar Avalúo PDF
           </button>
@@ -1731,10 +1734,76 @@
   document.getElementById('btn-generar-informe').addEventListener('click', () => document.getElementById('modal-informe').classList.remove('hidden'))
   document.getElementById('btn-modal-cerrar').addEventListener('click', () => document.getElementById('modal-informe').classList.add('hidden'))
   document.getElementById('btn-preliminar-pdf').addEventListener('click', descargarComparablesPreliminares)
+  document.getElementById('btn-vista-pdf').addEventListener('click', exportarVistaActual)
 
   document.getElementById('btn-descargar-pdf').addEventListener('click', () => mostrarVistaPrevia())
 
   document.getElementById('btn-enviar-email').addEventListener('click', enviarCorreo)
+
+  async function exportarVistaActual() {
+    const btn = document.getElementById('btn-vista-pdf')
+    const textoOrig = btn.textContent
+    const app = document.getElementById('app')
+    const acciones = document.getElementById('btn-informe-wrap')
+    btn.textContent = 'Preparando vista…'
+    btn.disabled = true
+
+    try {
+      await _imageCapture
+      const sinImagen = _listings.slice(0, 10).filter(l => !l.imageDataUrl && l.imagen_url)
+      if (sinImagen.length) await capturarImagenesPreview(sinImagen)
+
+      // Los botones de generación no forman parte de la evidencia exportada.
+      acciones.style.display = 'none'
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+
+      const canvas = await html2canvas(app, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#f9fafb',
+        logging: false,
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: app.scrollHeight,
+      })
+
+      const { jsPDF } = window.jspdf
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const anchoPagina = 210
+      const altoPagina = 297
+      const altoCortePx = Math.floor(canvas.width * altoPagina / anchoPagina)
+      let origenY = 0
+      let pagina = 0
+
+      while (origenY < canvas.height) {
+        const altoActual = Math.min(altoCortePx, canvas.height - origenY)
+        const corte = document.createElement('canvas')
+        corte.width = canvas.width
+        corte.height = altoActual
+        const ctx = corte.getContext('2d')
+        ctx.fillStyle = '#f9fafb'
+        ctx.fillRect(0, 0, corte.width, corte.height)
+        ctx.drawImage(
+          canvas,
+          0, origenY, canvas.width, altoActual,
+          0, 0, canvas.width, altoActual
+        )
+
+        if (pagina > 0) pdf.addPage()
+        const altoMm = altoActual * anchoPagina / canvas.width
+        pdf.addImage(corte.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, anchoPagina, altoMm)
+        origenY += altoActual
+        pagina++
+      }
+
+      const nombreArchivo = `Vista-actual-${(_urb || _sector).replace(/\s+/g,'-')}-${new Date().toISOString().slice(0,10)}.pdf`
+      pdf.save(nombreArchivo)
+    } finally {
+      acciones.style.display = ''
+      btn.textContent = textoOrig
+      btn.disabled = false
+    }
+  }
 
   function descargarComparablesPreliminares() {
     const btn = document.getElementById('btn-preliminar-pdf')
