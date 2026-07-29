@@ -1467,7 +1467,8 @@
     document.getElementById('stats-grid').innerHTML = [
       { label: 'Precio promedio',      valor: avg  ? fmt.format(avg)           : '—' },
       { label: 'Rango técnico Q1–Q3',  valor: rangoLabel },
-      { label: 'USD/m² mediana',       valor: avgM2 ? fmtM2(avgM2)             : '—' },
+      { label: _stats.ajusteEscala ? 'USD/m² homologado' : 'USD/m² mediana',
+                                            valor: avgM2 ? fmtM2(avgM2)             : '—' },
       { label: 'Dispersión mercado',   valor: _stats.cv != null ? `${_stats.cv}% CV${_stats.nOutliers ? ` · ${_stats.nOutliers} outlier${_stats.nOutliers>1?'s':''}` : ''}` : '—' },
     ].map(s => `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4"><p class="text-xs text-gray-500 mb-1">${s.label}</p><p class="text-xl font-bold text-gray-800">${s.valor}</p></div>`).join('')
 
@@ -1476,7 +1477,8 @@
     const metodoLabel = _stats.nOutliers ? `${metodo} · ${_stats.nOutliers} outlier${_stats.nOutliers>1?'s':''} excluido${_stats.nOutliers>1?'s':''}` : metodo
     if (areaEst && avgM2) {
       document.getElementById('estimacion-valor').textContent = fmt.format(areaEst * avgM2)
-      document.getElementById('estimacion-detalle').textContent = `${fmtN(areaEst)} m² construcción × ${fmtM2(avgM2)} mediana · ${metodoLabel}`
+      document.getElementById('estimacion-detalle').textContent =
+        `${fmtN(areaEst)} m² construcción × ${fmtM2(avgM2)} ${_stats.ajusteEscala ? 'homologado por escala' : 'mediana'} · ${metodoLabel}`
       estWrap.classList.remove('hidden')
     } else if (ficha.areaTotal && avgM2) {
       document.getElementById('estimacion-valor').textContent = fmt.format(ficha.areaTotal * avgM2)
@@ -3330,9 +3332,25 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     // Si hay vecinas mezcladas (nivel 3) → promedio ponderado (respeta pesos de cascada)
     // Si todos son de la misma urb       → mediana (más robusta, ignora outliers)
     const hayVecinas = pool.some(l => l._origen === 'vecina')
-    const valorM2    = hayVecinas
+    const valorM2Base = hayVecinas
       ? (avgM2Calc || medianaM2)   // ponderado: vecinas pesan menos → valor más cercano a la urb base
       : (medianaM2 || avgM2Calc)   // mediana pura cuando todo es de la misma urb
+    let valorM2 = valorM2Base
+    let ajusteEscala = null
+
+    // Napoli: economía de escala para no transferir linealmente el USD/m² de
+    // casas pequeñas (mayoritariamente 113–120 m²) a un sujeto mucho mayor.
+    // Coeficiente conservador de 0,25, limitado para evitar sobrecorrecciones.
+    if (analisisNapoli && _ficha.areaCons && valorM2Base) {
+      const areasComparables = pool.map(l => getCompCons(l)).filter(v => v > 0)
+      const areaMediana = median(areasComparables)
+      if (areaMediana) {
+        const relacion = _ficha.areaCons / areaMediana
+        const factor = clamp(Math.pow(relacion, -0.25), 0.88, 1.08)
+        valorM2 = valorM2Base * factor
+        ajusteEscala = { areaMediana, relacion, factor, valorM2Base }
+      }
+    }
     const cv        = pm2Vals.length >= 2
       ? Math.round(stdDev(pm2Vals) / (medianaM2 || 1) * 100)
       : null
@@ -3348,6 +3366,7 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       max:           cp.length ? Math.max(...cp.map(l => l.precio)) : null,
       avgM2:         valorM2,       // Mediana (o promedio ponderado si no hay suficientes)
       medianaM2,
+      ajusteEscala,
       q1M2, q3M2,
       q1Precio, q3Precio,
       cv,
