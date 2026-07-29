@@ -774,21 +774,26 @@ def main():
                     continue
                 for urb_slug in urbs:
                     urb_nombre = urb_slug.replace("-", " ").title()
-                    url = build_url_urb(tipo_slug, sector_key, urb_slug, 1)
-                    listings = scrape_pagina(page, url, sector_nombre, tipo_nombre, urb_nombre)
-                    if not listings:
-                        continue
-                    enriquecidos = 0
-                    for listing in listings:
-                        if MAX_ENRIQUECIMIENTO > 0 and enriquecidos < MAX_ENRIQUECIMIENTO:
-                            enriquecer_listing(page, listing)
-                            enriquecidos += 1
-                            time.sleep(DELAY_SEGUNDOS)
-                        procesar_imagen(supabase, listing)
-                    guardados = guardar_listings(supabase, listings)
-                    total_guardados += guardados
-                    log.info(f"  {tipo_nombre} · {sector_nombre} · {urb_slug}: {len(listings)} encontrados, {guardados} guardados")
-                    time.sleep(DELAY_SEGUNDOS)
+                    paginas_urb = range(1, MAX_PAGINAS_URB + 1) if urb_slug == "napoli" else range(1, 2)
+                    for pagina_urb in paginas_urb:
+                        url = build_url_urb(tipo_slug, sector_key, urb_slug, pagina_urb)
+                        listings = scrape_pagina(page, url, sector_nombre, tipo_nombre, urb_nombre)
+                        if not listings:
+                            break
+                        enriquecidos = 0
+                        for listing in listings:
+                            if MAX_ENRIQUECIMIENTO > 0 and enriquecidos < MAX_ENRIQUECIMIENTO:
+                                enriquecer_listing(page, listing)
+                                enriquecidos += 1
+                                time.sleep(DELAY_SEGUNDOS)
+                            procesar_imagen(supabase, listing)
+                        guardados = guardar_listings(supabase, listings)
+                        total_guardados += guardados
+                        log.info(
+                            f"  {tipo_nombre} · {sector_nombre} · {urb_slug} · pág. {pagina_urb}: "
+                            f"{len(listings)} encontrados, {guardados} guardados"
+                        )
+                        time.sleep(DELAY_SEGUNDOS)
 
         page.close()
 

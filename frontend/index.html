@@ -157,6 +157,27 @@
               <option value="estandar">Estándar</option><option value="moderno">Moderno / Contemporáneo</option><option value="lujo">De lujo</option>
             </select>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Piscina <span class="text-gray-400 font-normal">homologación</span></label>
+            <select id="piscina" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— No especificar —</option>
+              <option value="si">Sí tiene piscina</option><option value="no">No tiene piscina</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dormitorio de servicio <span class="text-gray-400 font-normal">homologación</span></label>
+            <select id="servicio" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— No especificar —</option>
+              <option value="si">Sí tiene</option><option value="no">No tiene</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Baño de servicio <span class="text-gray-400 font-normal">homologación</span></label>
+            <select id="bano-servicio" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">— No especificar —</option>
+              <option value="si">Sí tiene</option><option value="no">No tiene</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -907,6 +928,20 @@
       .toLowerCase()
   }
 
+  function detectarAmenidades(listing) {
+    const texto = textoNormalizadoListing(listing)
+    const piscinaNo = /\bsin piscina\b|\bno (?:cuenta|tiene) con piscina\b/.test(texto)
+    const piscinaSi = !piscinaNo && /\bpiscina\b|\bjacuzzi\b|\bhidromasaje\b/.test(texto)
+    const servicioNo = /\bsin (?:cuarto|dormitorio|habitacion) de servicio\b/.test(texto)
+    const servicioSi = !servicioNo && /(?:cuarto|dormitorio|habitacion) (?:de |del )?(?:servicio|emplead[ao]|domestic[ao])/.test(texto)
+    const banoServicioSi = servicioSi && /(?:servicio|emplead[ao]|domestic[ao]).{0,45}\b(?:bano|ducha)\b|\b(?:bano|ducha)\b.{0,45}(?:servicio|emplead[ao]|domestic[ao])/.test(texto)
+    return {
+      piscina: piscinaSi ? 'si' : piscinaNo ? 'no' : '',
+      servicio: servicioSi ? 'si' : servicioNo ? 'no' : '',
+      banoServicio: banoServicioSi ? 'si' : '',
+    }
+  }
+
   const fmt   = new Intl.NumberFormat('es-EC', { style:'currency', currency:'USD', maximumFractionDigits:0 })
   const fmtN  = v => new Intl.NumberFormat('es-EC', { maximumFractionDigits:0 }).format(v)
   const fmtM2 = v => `${fmtN(v)} USD/m²`
@@ -995,6 +1030,9 @@
     const parqueos     = document.getElementById('parqueos').value
     const pisos        = document.getElementById('pisos').value
     const acabados     = document.getElementById('acabados').value
+    const piscina      = document.getElementById('piscina').value
+    const servicio     = document.getElementById('servicio').value
+    const banoServicio = document.getElementById('bano-servicio').value
     const estado       = document.getElementById('inmueble-estado').value
     const areaTotal    = parseFloat(document.getElementById('area-total').value) || null
     const areaCons     = parseFloat(document.getElementById('area-construccion').value) || null
@@ -1173,6 +1211,9 @@
             habitaciones,
             banos:     banos    ? parseInt(banos)    : null,
             parqueos:  parqueos ? parseInt(parqueos) : null,
+            piscina,
+            servicio,
+            banoServicio,
             urb:       normUrb(urbanizacion),
             subzona,
             condicion: estado || 'usada',   // condición del SUJETO para ajuste relativo A1
@@ -1202,7 +1243,7 @@
               }
             }
             // Filtro duro 0b: pm² fuera del rango absoluto por urb (red de seguridad extrema)
-            const compUrbNorm = normUrb(comp.urbanizacion || '')
+            const compUrbNorm = normUrb(comp._urbOrigen || comp.urbanizacion || '')
             const rangoPm2    = PM2_RANGOS[compUrbNorm] || PM2_RANGOS[normUrb(urbanizacion)] || null
             if (rangoPm2 && comp.precio && comp.area_cubierta_m2 && comp.area_cubierta_m2 >= 20) {
               const pm2Comp = comp.precio / comp.area_cubierta_m2
@@ -1307,10 +1348,12 @@
       }
 
       _listings = data; _sector = sector; _tipo = tipo; _urb = urbanizacion
-      _ficha = { areaTotal, areaCons, pisos, acabados, estado, habitaciones, banos, parqueos, subzona }
+      _ficha = { areaTotal, areaCons, pisos, acabados, estado, habitaciones, banos, parqueos,
+        piscina, servicio, banoServicio, subzona }
       _stats = calcStats(data)
       mostrarLoader(false)
-      renderResultados(data, sector, tipo, { areaTotal, areaCons, pisos, acabados }, origenLabel)
+      renderResultados(data, sector, tipo,
+        { areaTotal, areaCons, pisos, acabados, piscina, servicio, banoServicio }, origenLabel)
       _imageCapture = capturarImagenesPreview(_listings.slice(0, 10))
     } catch (err) {
       mostrarLoader(false)
@@ -1406,6 +1449,9 @@
     if (ficha.areaCons)  fichaItems.push(`<span><strong>Construcción:</strong> ${fmtN(ficha.areaCons)} m²</span>`)
     if (ficha.pisos)     fichaItems.push(`<span><strong>Pisos:</strong> ${ficha.pisos}</span>`)
     if (ficha.acabados)  fichaItems.push(`<span><strong>Acabados:</strong> ${ACABADOS[ficha.acabados]}</span>`)
+    if (ficha.piscina)   fichaItems.push(`<span><strong>Piscina:</strong> ${ficha.piscina === 'si' ? 'Sí' : 'No'}</span>`)
+    if (ficha.servicio)  fichaItems.push(`<span><strong>Dorm. servicio:</strong> ${ficha.servicio === 'si' ? 'Sí' : 'No'}</span>`)
+    if (ficha.banoServicio) fichaItems.push(`<span><strong>Baño servicio:</strong> ${ficha.banoServicio === 'si' ? 'Sí' : 'No'}</span>`)
     const fichaWrap = document.getElementById('ficha-wrap')
     if (fichaItems.length) { document.getElementById('ficha-contenido').innerHTML = fichaItems.join(''); fichaWrap.classList.remove('hidden') }
     else { fichaWrap.classList.add('hidden') }
@@ -1517,7 +1563,8 @@
 
       // Motivo techo: badge compacto inline
       const motivoCorto = l._motivoTecho
-        ? l._motivoTecho.includes('construcción') || l._motivoTecho.includes('m²') ? '📐 Área fuera de rango'
+        ? l._motivoTecho.includes('pm²') ? '💲 Precio/m² fuera de rango'
+        : l._motivoTecho.includes('construcción') ? '📐 Área fuera de rango'
         : l._motivoTecho.includes('Dormitorios') ? '🛏 Dormitorios muy superiores'
         : l._motivoTecho.includes('Baños') ? '🚿 Baños muy superiores'
         : l._motivoTecho.includes('Ajuste') ? '⚖️ Ajuste excesivo'
@@ -1548,6 +1595,8 @@
             ${l.habitaciones ? `<span>🛏 ${l.habitaciones}</span>` : ''}
             ${l.banos        ? `<span>🚿 ${l.banos}</span>` : ''}
             ${l.parqueos     ? `<span>🚗 ${l.parqueos}</span>` : ''}
+            ${l._amenidades?.piscina === 'si' ? '<span title="Piscina declarada">🏊 Piscina</span>' : ''}
+            ${l._amenidades?.servicio === 'si' ? '<span title="Dormitorio de servicio declarado">🧹 Servicio</span>' : ''}
           </div>
           ${ajusteLabel ? `<div class="mt-1">${ajusteLabel}</div>` : ''}
         </div>
@@ -2282,6 +2331,9 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       ...(_ficha.parqueos!=null&&_ficha.parqueos!==''?[['Parqueos',_ficha.parqueos==='0'?'Sin parqueo':_ficha.parqueos+' cubiertos']]:[]),
       ...(_ficha.pisos?[['Pisos',_ficha.pisos]]:[]),
       ...(_ficha.acabados?[['Acabados',ACABADOS[_ficha.acabados]]]:[]),
+      ...(_ficha.piscina?[['Piscina',_ficha.piscina==='si'?'Sí':'No']]:[]),
+      ...(_ficha.servicio?[['Dormitorio de servicio',_ficha.servicio==='si'?'Sí':'No']]:[]),
+      ...(_ficha.banoServicio?[['Baño de servicio',_ficha.banoServicio==='si'?'Sí':'No']]:[]),
       ...(_ficha.estado?[['Estado',ESTADO_LABELS[_ficha.estado]||_ficha.estado]]:[]),
       ...(_ficha.edad?[['Edad',_ficha.edad+' años']]:[]),
     ]
@@ -2792,6 +2844,8 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
     if (_ficha.acabados === 'lujo') f.push('Acabados de lujo que posicionan el inmueble en el segmento premium')
     if (_ficha.acabados === 'moderno') f.push('Acabados modernos y contemporáneos que incrementan el atractivo comercial')
     if (_ficha.pisos === '2') f.push('Distribución en dos plantas que optimiza el aprovechamiento del espacio')
+    if (_ficha.piscina === 'si') f.push('Piscina privada, amenidad especial homologada por valor contributivo')
+    if (_ficha.servicio === 'si') f.push(`Dormitorio de servicio${_ficha.banoServicio === 'si' ? ' con baño independiente' : ''}`)
     if (_stats.count >= 10) f.push('Sector con alta liquidez y múltiples referencias de mercado activas')
     if (_ficha.areaCons && _ficha.areaTotal && (_ficha.areaCons / _ficha.areaTotal) > 0.65) f.push('Alta relación construcción/terreno que maximiza el espacio habitable útil')
     return f.slice(0, 5)
@@ -2890,6 +2944,20 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       score += d === 0 ? 3 : d === 1 ? 1 : 0
     } else { score += 1 }
 
+    // AMENIDADES ESPECIALES (9 pts) — solo se activan si el sujeto las especifica.
+    // "No informado" no equivale a "no tiene": recibe puntuación neutral y no ajuste monetario.
+    const amen = detectarAmenidades(comp)
+    comp._amenidades = amen
+    if (ficha.piscina) {
+      score += amen.piscina === ficha.piscina ? 4 : amen.piscina === '' ? 1 : 0
+    }
+    if (ficha.servicio) {
+      score += amen.servicio === ficha.servicio ? 3 : amen.servicio === '' ? 1 : 0
+    }
+    if (ficha.banoServicio) {
+      score += amen.banoServicio === ficha.banoServicio ? 2 : amen.banoServicio === '' ? 1 : 0
+    }
+
     score += 1  // antigüedad — sin dato en BD, neutral
 
     return Math.min(score, 100)
@@ -2971,7 +3039,24 @@ window.addEventListener('load', function() { setTimeout(initMap, 100); });
       else if (dD === -1) { ajustes.dormitorios =  0.03; precio *= 1.03 }
     }
 
-    // A6 — Penalización por distancia geográfica (vecinas)
+    // A6 — Amenidades por valor contributivo conservador.
+    // Solo se homologa cuando el anuncio declara expresamente presencia o ausencia.
+    // La falta de información no se interpreta como ausencia.
+    const amen = comp._amenidades || detectarAmenidades(comp)
+    if (ficha.piscina && amen.piscina && ficha.piscina !== amen.piscina) {
+      const adj = ficha.piscina === 'si' ? 0.06 : -0.06
+      ajustes.piscina = adj; precio *= (1 + adj)
+    }
+    if (ficha.servicio && amen.servicio && ficha.servicio !== amen.servicio) {
+      const adj = ficha.servicio === 'si' ? 0.03 : -0.03
+      ajustes.servicio = adj; precio *= (1 + adj)
+    }
+    if (ficha.banoServicio && amen.banoServicio && ficha.banoServicio !== amen.banoServicio) {
+      const adj = ficha.banoServicio === 'si' ? 0.015 : -0.015
+      ajustes.banoServicio = adj; precio *= (1 + adj)
+    }
+
+    // A7 — Penalización por distancia geográfica (vecinas)
     if (comp._origen === 'vecina' && comp._peso) {
       const locAdj = -(1 - comp._peso) * 0.08
       ajustes.ubicacion = locAdj

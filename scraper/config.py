@@ -118,7 +118,11 @@ def build_url(tipo: str, sector_key: str, page: int = 1) -> str:
 
 def build_url_urb(tipo: str, sector_key: str, urb_slug: str, page: int = 1) -> str:
     """URL para una urbanización específica dentro de un sector."""
-    if sector_key.startswith("q-"):
+    # Napoli aparece publicado bajo Daule, La Aurora, Samborondón y Guayaquil.
+    # La búsqueda provincial evita perder anuncios por una ubicación editorial distinta.
+    if urb_slug == "napoli":
+        path = f"{BASE_URL}/{tipo}/guayas/q-napoli"
+    elif sector_key.startswith("q-"):
         keyword = sector_key[2:]
         path = f"{BASE_URL}/{tipo}/guayas/guayaquil/q-{keyword}/q-{urb_slug}"
     else:
