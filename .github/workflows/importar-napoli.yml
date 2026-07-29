@@ -13,11 +13,19 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar cliente de Supabase
-        run: pip install --no-cache-dir supabase
+      - name: Instalar dependencias
+        run: |
+          pip install --no-cache-dir -r scraper/requirements.txt
+          playwright install --with-deps chromium
 
       - name: Importar anuncios verificados
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python scraper/importar_napoli_verificado.py
+
+      - name: Recuperar y conservar fotografías reales
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scraper/recuperar_imagenes_napoli.py
