@@ -11,6 +11,7 @@ REQUISITO SUPABASE STORAGE:
 import hashlib
 import json
 import logging
+import os
 import re
 import time
 import unicodedata
@@ -719,6 +720,9 @@ def guardar_listings(supabase_client, listings: list[dict]) -> int:
 def main():
     log.info("=== ACM Guayaquil — Scraper iniciado ===")
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    target_urb = os.environ.get("ACM_TARGET_URB", "").strip().lower()
+    if target_urb:
+        log.info(f"Modo dirigido: solo urbanización {target_urb}")
 
     total_guardados = 0
     combinaciones = [(t, s) for t in TIPOS for s in SECTORES]
@@ -733,35 +737,36 @@ def main():
         ))
         page = context.new_page()
 
-        for tipo_slug, sector_key in combinaciones:
-            tipo_nombre   = TIPOS[tipo_slug]
-            sector_nombre = SECTORES[sector_key]
-            log.info(f"\n→ {tipo_nombre} en {sector_nombre}")
+        if not target_urb:
+            for tipo_slug, sector_key in combinaciones:
+                tipo_nombre   = TIPOS[tipo_slug]
+                sector_nombre = SECTORES[sector_key]
+                log.info(f"\n→ {tipo_nombre} en {sector_nombre}")
 
-            for pagina in range(1, MAX_PAGINAS + 1):
-                url = build_url(tipo_slug, sector_key, pagina)
-                listings = scrape_pagina(page, url, sector_nombre, tipo_nombre)
+                for pagina in range(1, MAX_PAGINAS + 1):
+                    url = build_url(tipo_slug, sector_key, pagina)
+                    listings = scrape_pagina(page, url, sector_nombre, tipo_nombre)
 
-                if not listings:
-                    log.info(f"  Página {pagina}: sin resultados")
-                    break
+                    if not listings:
+                        log.info(f"  Página {pagina}: sin resultados")
+                        break
 
-                enriquecidos = 0
-                for listing in listings:
-                    if MAX_ENRIQUECIMIENTO > 0 and enriquecidos < MAX_ENRIQUECIMIENTO:
-                        enriquecer_listing(page, listing)
-                        enriquecidos += 1
-                        time.sleep(DELAY_SEGUNDOS)
-                    procesar_imagen(supabase, listing, page.request)
+                    enriquecidos = 0
+                    for listing in listings:
+                        if MAX_ENRIQUECIMIENTO > 0 and enriquecidos < MAX_ENRIQUECIMIENTO:
+                            enriquecer_listing(page, listing)
+                            enriquecidos += 1
+                            time.sleep(DELAY_SEGUNDOS)
+                        procesar_imagen(supabase, listing, page.request)
 
-                if MAX_ENRIQUECIMIENTO > 0:
-                    log.info(f"  Enriquecidos: {enriquecidos} de {len(listings)}")
+                    if MAX_ENRIQUECIMIENTO > 0:
+                        log.info(f"  Enriquecidos: {enriquecidos} de {len(listings)}")
 
-                guardados = guardar_listings(supabase, listings)
-                total_guardados += guardados
-                log.info(f"  Página {pagina}: {len(listings)} encontrados, {guardados} guardados")
+                    guardados = guardar_listings(supabase, listings)
+                    total_guardados += guardados
+                    log.info(f"  Página {pagina}: {len(listings)} encontrados, {guardados} guardados")
 
-                time.sleep(DELAY_SEGUNDOS)
+                    time.sleep(DELAY_SEGUNDOS)
 
         # ── Urbanizaciones específicas (casas + departamentos, 1 página) ──
         log.info("\n=== Scraping por urbanizaciones ===")
@@ -773,6 +778,8 @@ def main():
                 if tipo_slug not in TIPOS_URB:
                     continue
                 for urb_slug in urbs:
+                    if target_urb and urb_slug != target_urb:
+                        continue
                     urb_nombre = urb_slug.replace("-", " ").title()
                     paginas_urb = range(1, MAX_PAGINAS_URB + 1) if urb_slug == "napoli" else range(1, 2)
                     for pagina_urb in paginas_urb:

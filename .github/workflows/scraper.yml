@@ -3,7 +3,12 @@ name: ACM Scraper Diario
 on:
   schedule:
     - cron: '0 16 * * *'  # 11 AM hora Ecuador (UTC-5)
-  workflow_dispatch:       # permite correrlo manualmente
+  workflow_dispatch:
+    inputs:
+      target_urb:
+        description: 'Urbanización específica (vacío = mercado completo)'
+        required: false
+        default: ''
 
 jobs:
   scraper:
@@ -24,4 +29,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          ACM_TARGET_URB: ${{ inputs.target_urb }}
         run: python scraper/scraper.py
