@@ -942,6 +942,27 @@
     }
   }
 
+  function deduplicarComparables(listings) {
+    const vistos = new Map()
+    for (const listing of listings) {
+      const titulo = textoNormalizadoListing({ titulo: listing.titulo || '' })
+        .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140)
+      const area = Math.round(getCompCons(listing) || getCompTerr(listing) || 0)
+      const clave = `${Math.round(listing.precio || 0)}|${area}|${listing.habitaciones || 0}|${titulo}`
+      const anterior = vistos.get(clave)
+      if (!anterior) {
+        vistos.set(clave, listing)
+        continue
+      }
+      // Conservar la ficha técnicamente más completa.
+      const calidad = l => [
+        l.area_cubierta_m2, l.area_total_m2, l.banos, l.parqueos, l.imagen_url,
+      ].filter(v => v !== null && v !== undefined && v !== '').length
+      if (calidad(listing) > calidad(anterior)) vistos.set(clave, listing)
+    }
+    return [...vistos.values()]
+  }
+
   const fmt   = new Intl.NumberFormat('es-EC', { style:'currency', currency:'USD', maximumFractionDigits:0 })
   const fmtN  = v => new Intl.NumberFormat('es-EC', { maximumFractionDigits:0 }).format(v)
   const fmtM2 = v => `${fmtN(v)} USD/m²`
@@ -1034,6 +1055,7 @@
     const servicio     = document.getElementById('servicio').value
     const banoServicio = document.getElementById('bano-servicio').value
     const estado       = document.getElementById('inmueble-estado').value
+    const esAnalisisNapoli = normUrb(urbanizacion) === 'napoli'
     const areaTotal    = parseFloat(document.getElementById('area-total').value) || null
     const areaCons     = parseFloat(document.getElementById('area-construccion').value) || null
 
@@ -1089,7 +1111,7 @@
         // NIVEL 1: urb + etapa exacta (si subzona está llena)
         if (subzona) {
           const buscarN1 = (conHab, conParq) =>
-            baseQuery(conHab, conParq)
+            baseQuery(esAnalisisNapoli ? false : conHab, conParq)
               .ilike('urbanizacion', `%${urbanizacion}%`)
               .or(`titulo.ilike.%${subzona}%,direccion.ilike.%${subzona}%`)
           const { data: dN1, filtrosAplicados: faN1 } = await buscarConRelajacion(buscarN1)
@@ -1102,7 +1124,7 @@
         // NIVEL 2: urb exacta, cualquier etapa
         if (dUrb.length < 3) {
           const buscarN2 = (conHab, conParq) =>
-            baseQuery(conHab, conParq)
+            baseQuery(esAnalisisNapoli ? false : conHab, conParq)
               .or(`urbanizacion.ilike.%${urbanizacion}%,titulo.ilike.%${urbanizacion}%,direccion.ilike.%${urbanizacion}%`)
           const { data: dN2, filtrosAplicados: faN2 } = await buscarConRelajacion(buscarN2)
           if (dN2 && dN2.length > 0) {
@@ -1160,7 +1182,8 @@
             for (const vecDef of vecinos) {
               const vNombre = vecDef.urb, vPeso = vecDef.peso
               const orV = [`urbanizacion.ilike.%${vNombre}%`, `titulo.ilike.%${vNombre}%`].join(',')
-              const buscarV = (conHab, conParq) => baseQuery(conHab, conParq).or(orV)
+              const buscarV = (conHab, conParq) =>
+                baseQuery(esAnalisisNapoli ? false : conHab, conParq).or(orV)
               const { data: dV } = await buscarConRelajacion(buscarV)
               if (!dV || !dV.length) continue
               const candidatosEtapa = vecDef.etapas?.length
@@ -1173,8 +1196,13 @@
                 : dV
               const nuevos = candidatosEtapa.filter(l => !urbIds.has(l.id))
               const compat = filtrarPrecioCompatible(nuevos, pRef)
-              // Mismas habitaciones exactas
-              const conHab = habitaciones ? compat.filter(l => l.habitaciones === habitaciones) : compat
+              // Napoli: 3 y 4 dormitorios conviven en la misma muestra si el metraje
+              // es compatible; la diferencia se homologa en scoring y ajustes.
+              const conHab = habitaciones
+                ? compat.filter(l => esAnalisisNapoli
+                    ? !l.habitaciones || Math.abs(l.habitaciones - habitaciones) <= 1
+                    : l.habitaciones === habitaciones)
+                : compat
               descartadosPrecio += nuevos.length - conHab.length
               conHab.forEach(l => { l._peso = vPeso; l._origen = 'vecina'; l._nivel = 3; l._urbOrigen = vNombre; urbIds.add(l.id) })
               dVec = [...dVec, ...conHab]
@@ -1185,6 +1213,12 @@
         }
 
         data = [...dUrb, ...dVec]
+        if (esAnalisisNapoli) {
+          data = deduplicarComparables(data)
+          const idsFinales = new Set(data.map(l => l.id || l.url_fuente))
+          dUrb = dUrb.filter(l => idsFinales.has(l.id || l.url_fuente))
+          dVec = dVec.filter(l => idsFinales.has(l.id || l.url_fuente))
+        }
 
         // ── Pre-filtro: eliminar datos imposibles ANTES de entrar al pool ──
         // Incluye pm² claramente fuera del rango absoluto del sector del sujeto
