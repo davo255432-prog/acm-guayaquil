@@ -250,9 +250,14 @@
       <div id="btn-informe-wrap" class="hidden mt-8 p-6 rounded-2xl text-white" style="background:linear-gradient(135deg,#1e3a5f,#2d5a8e)">
         <p class="font-bold text-lg mb-1">Generar Avalúo Comercial Profesional</p>
         <p class="text-blue-200 text-sm mb-4">PDF completo listo para entregar al cliente — con fichas, análisis técnico y firma del agente.</p>
-        <button id="btn-generar-informe" class="font-semibold px-6 py-3 rounded-lg text-sm transition-colors text-white" style="background:#c9a84c">
-          Generar Avalúo PDF
-        </button>
+        <div class="flex flex-wrap gap-3">
+          <button id="btn-preliminar-pdf" class="font-semibold px-6 py-3 rounded-lg text-sm transition-colors border border-white/40 text-white bg-white/10 hover:bg-white/20">
+            Descargar comparables preliminares
+          </button>
+          <button id="btn-generar-informe" class="font-semibold px-6 py-3 rounded-lg text-sm transition-colors text-white" style="background:#c9a84c">
+            Generar Avalúo PDF
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1725,10 +1730,164 @@
   // ── Modal ──
   document.getElementById('btn-generar-informe').addEventListener('click', () => document.getElementById('modal-informe').classList.remove('hidden'))
   document.getElementById('btn-modal-cerrar').addEventListener('click', () => document.getElementById('modal-informe').classList.add('hidden'))
+  document.getElementById('btn-preliminar-pdf').addEventListener('click', descargarComparablesPreliminares)
 
   document.getElementById('btn-descargar-pdf').addEventListener('click', () => mostrarVistaPrevia())
 
   document.getElementById('btn-enviar-email').addEventListener('click', enviarCorreo)
+
+  function descargarComparablesPreliminares() {
+    const btn = document.getElementById('btn-preliminar-pdf')
+    const textoOrig = btn.textContent
+    btn.textContent = 'Generando preliminar…'
+    btn.disabled = true
+
+    try {
+      const { jsPDF } = window.jspdf
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const comps = _listings.slice(0, 10)
+      const areaEst = _ficha.areaCons || _ficha.areaTotal
+      const valorEst = areaEst && _stats.avgM2 ? Math.round(areaEst * _stats.avgM2) : null
+      const fecha = new Date().toLocaleDateString('es-EC', { year:'numeric', month:'long', day:'numeric' })
+      const margenX = 15
+      const ancho = 180
+      let y = 16
+
+      const nuevaPagina = () => {
+        pdf.addPage()
+        y = 16
+      }
+      const asegurarEspacio = alto => {
+        if (y + alto > 281) nuevaPagina()
+      }
+      const texto = (contenido, x, anchoTexto, opciones = {}) => {
+        const lineas = pdf.splitTextToSize(String(contenido || '—'), anchoTexto)
+        pdf.text(lineas, x, y, opciones)
+        y += lineas.length * 4
+      }
+      const etiqueta = (label, valor, x, w) => {
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(7)
+        pdf.setTextColor(100, 116, 139)
+        pdf.text(label.toUpperCase(), x, y)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(10)
+        pdf.setTextColor(15, 39, 72)
+        pdf.text(String(valor ?? '—'), x, y + 5)
+      }
+
+      pdf.setFillColor(15, 39, 72)
+      pdf.rect(0, 0, 210, 34, 'F')
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(18)
+      pdf.text('Comparables preliminares', margenX, 15)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(9)
+      pdf.text(`${_tipo} · ${_sector}${_urb ? ' · ' + _urb : ''}`, margenX, 22)
+      pdf.setTextColor(201, 168, 76)
+      pdf.text(`Consulta: ${fecha}`, margenX, 28)
+      y = 43
+
+      etiqueta('Área total', _ficha.areaTotal ? `${fmtN(_ficha.areaTotal)} m²` : '—', margenX, 40)
+      etiqueta('Construcción', _ficha.areaCons ? `${fmtN(_ficha.areaCons)} m²` : '—', 58, 40)
+      etiqueta('Dormitorios', _ficha.habitaciones || '—', 105, 30)
+      etiqueta('Baños', _ficha.banos || '—', 139, 25)
+      etiqueta('Parqueos', _ficha.parqueos ?? '—', 169, 25)
+      y += 14
+
+      pdf.setFillColor(235, 243, 254)
+      pdf.roundedRect(margenX, y, ancho, 23, 2, 2, 'F')
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(26, 86, 219)
+      pdf.setFontSize(8)
+      pdf.text('VALOR PRELIMINAR ACM', margenX + 5, y + 7)
+      pdf.setFontSize(17)
+      pdf.text(valorEst ? fmt.format(valorEst) : '—', margenX + 5, y + 17)
+      pdf.setFontSize(8)
+      pdf.setTextColor(71, 85, 105)
+      pdf.text(_stats.avgM2 ? `${fmtM2(_stats.avgM2)} · ${_stats.metodo}` : _stats.metodo, 83, y + 14, { maxWidth: 106 })
+      y += 31
+
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(12)
+      pdf.setTextColor(15, 39, 72)
+      pdf.text(`Comparables seleccionados (${comps.length})`, margenX, y)
+      y += 7
+
+      comps.forEach((l, i) => {
+        asegurarEspacio(39)
+        const pm2 = l._pm2 || l.precio_m2_cubierta || l.precio_m2
+        const clasificacion = l._clasificacion
+          ? `${l._clasificacion.charAt(0).toUpperCase() + l._clasificacion.slice(1)}${l._score ? ` ${l._score}/100` : ''}`
+          : 'Sin clasificación'
+        const area = getCompCons(l) || l.area_m2
+        const ajustado = l._precioAjustado ? fmt.format(Math.round(l._precioAjustado)) : '—'
+        const titulo = `${i + 1}. ${l.titulo || `${_tipo} en ${l.urbanizacion || _sector}`}`
+
+        pdf.setDrawColor(226, 232, 240)
+        pdf.setFillColor(255, 255, 255)
+        pdf.roundedRect(margenX, y, ancho, 34, 2, 2, 'FD')
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(9)
+        pdf.setTextColor(15, 39, 72)
+        const tituloLineas = pdf.splitTextToSize(titulo, 135)
+        pdf.text(tituloLineas.slice(0, 2), margenX + 4, y + 6)
+        pdf.setFontSize(7)
+        pdf.setTextColor(180, 83, 9)
+        pdf.text(clasificacion, 190, y + 6, { align:'right' })
+
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(8)
+        pdf.setTextColor(51, 65, 85)
+        const detalle = [
+          l.precio ? `Publicado ${fmt.format(l.precio)}` : 'Precio —',
+          `Ajustado ${ajustado}`,
+          area ? `${fmtN(area)} m² cons.` : 'm² —',
+          pm2 ? `${fmtN(Math.round(pm2))} USD/m²` : 'USD/m² —',
+          `${l.habitaciones || '—'} dorm.`,
+          `${l.banos || '—'} baños`,
+          `${l.parqueos ?? '—'} parq.`,
+        ].join(' · ')
+        pdf.text(pdf.splitTextToSize(detalle, 171), margenX + 4, y + 17)
+
+        if (l.url_fuente) {
+          pdf.setTextColor(26, 86, 219)
+          pdf.setFontSize(7)
+          pdf.textWithLink('Abrir anuncio original y verificar fuente', margenX + 4, y + 29, { url: l.url_fuente })
+          pdf.setDrawColor(26, 86, 219)
+          pdf.line(margenX + 4, y + 30, margenX + 55, y + 30)
+        } else {
+          pdf.setTextColor(100, 116, 139)
+          pdf.setFontSize(7)
+          pdf.text('Fuente original no disponible', margenX + 4, y + 29)
+        }
+        y += 39
+      })
+
+      asegurarEspacio(29)
+      pdf.setFillColor(255, 251, 235)
+      pdf.roundedRect(margenX, y, ancho, 23, 2, 2, 'F')
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(8)
+      pdf.setTextColor(146, 64, 14)
+      pdf.text('ALCANCE DEL DOCUMENTO', margenX + 4, y + 6)
+      y += 11
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(7)
+      texto(
+        'Documento informativo generado con oferta publicada y ajustes automáticos ACM. Permite verificar las fuentes y comparables seleccionados. No constituye un avalúo comercial firmado ni sustituye la inspección física del inmueble.',
+        margenX + 4,
+        172
+      )
+
+      const nombreArchivo = `Preliminar-comparables-${(_urb || _sector).replace(/\s+/g,'-')}-${new Date().toISOString().slice(0,10)}.pdf`
+      pdf.save(nombreArchivo)
+    } finally {
+      btn.textContent = textoOrig
+      btn.disabled = false
+    }
+  }
 
   async function descargarPDF() {
     const btn = document.getElementById('btn-descargar-pdf')
