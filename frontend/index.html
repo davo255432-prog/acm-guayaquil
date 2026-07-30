@@ -925,6 +925,39 @@
     return texto.includes('napoli')
   }
 
+  // Fotografías verificadas manualmente desde cada anuncio de Napoli.
+  // La asociación usa la URL original para mantenerse estable aunque cambie
+  // el orden, el scoring o la cantidad de comparables mostrados.
+  const IMAGENES_VERIFICADAS_NAPOLI = {
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-alquiler-o-venta-casa-urbanizacion-napoli-3-dorm.-148106570.html':
+      './assets/napoli/casa-esquinera-168.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-urbanizacion-napoli-se-vende-linda-casa%21-149890495.html':
+      './assets/napoli/piscina-cascada-149.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-urb.-napoli-esquinera-junto-al-club-modelo-daniele-144659764.html':
+      './assets/napoli/modelo-daniele-135.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-se-vende-casa-con-piscina-en-urbanizacion-napoli-150481906.html':
+      './assets/napoli/piscina-145.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-venta-de-casa-en-urbanizacion-napoli-cg-149235295.html':
+      './assets/napoli/esquinera-138.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-oportunidad-casa-en-napoli-3-habitaciones-150380045.html':
+      './assets/napoli/oportunidad-115.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-se-vende-o-se-alquila-casa-esquinera-en-urb.-napoli-149797146.html':
+      './assets/napoli/esquinera-jacuzzi-135.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-vendo-casa-con-jacuzzi-en-urb-napoli-144606767.html':
+      './assets/napoli/jacuzzi-125.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-casa-de-130-m-sup2--3-dorm-napoli-via-a-salitre-150137351.html':
+      './assets/napoli/casa-130m-135.png',
+    'https://www.plusvalia.com/propiedades/clasificado/veclcain-venta-casa-urb.-napolis-3-hbts.-148778442.html':
+      './assets/napoli/hermosa-casa-130.png',
+  }
+
+  function aplicarImagenVerificada(listing) {
+    const url = (listing?.url_fuente || '').split('?')[0]
+    const imagen = IMAGENES_VERIFICADAS_NAPOLI[url]
+    if (imagen) listing.imagen_url = imagen
+    return listing
+  }
+
   function textoNormalizadoListing(listing) {
     return [
       listing?.urbanizacion,
@@ -1428,6 +1461,7 @@
   }
 
   function renderResultados(listings, sector, tipo, ficha, origenLabel) {
+    listings.forEach(aplicarImagenVerificada)
     document.getElementById('resultados').classList.remove('hidden')
     const { avg, min: mn, max: mx, avgM2, count, metodo } = _stats
 
