@@ -1864,12 +1864,11 @@
       const anchoPagina = 210
       const altoPagina = 297
       const altoCortePx = Math.floor(canvas.width * altoPagina / anchoPagina)
-      const paginasObjetivo = Math.max(1, Math.ceil(canvas.height / altoCortePx))
+      const paginasNaturales = Math.max(1, Math.ceil(canvas.height / altoCortePx))
+      const paginasObjetivo = Math.max(paginasNaturales, _listings.length >= 8 ? 3 : 1)
       const ultimoFragmento = canvas.height % altoCortePx
-      const equilibrarPaginas = paginasObjetivo > 1 && ultimoFragmento > 0 && ultimoFragmento < altoCortePx * 0.35
-      const altoObjetivoPx = equilibrarPaginas
-        ? Math.ceil(canvas.height / paginasObjetivo)
-        : altoCortePx
+      const equilibrarPaginas = paginasObjetivo > paginasNaturales ||
+        (paginasObjetivo > 1 && ultimoFragmento > 0 && ultimoFragmento < altoCortePx * 0.35)
       const escalaCaptura = canvas.height / app.scrollHeight
       const appTop = app.getBoundingClientRect().top
       const bloquesProtegidos = [
@@ -1888,10 +1887,14 @@
       let pagina = 0
 
       while (origenY < canvas.height) {
-        let finPagina = Math.min(origenY + altoObjetivoPx, canvas.height)
+        const paginasRestantes = Math.max(1, paginasObjetivo - pagina)
+        const altoPlaneado = equilibrarPaginas
+          ? Math.min(altoCortePx, Math.ceil((canvas.height - origenY) / paginasRestantes))
+          : altoCortePx
+        let finPagina = Math.min(origenY + altoPlaneado, canvas.height)
         if (finPagina < canvas.height) {
           const bloqueCortado = bloquesProtegidos.find(b =>
-            b.inicio > origenY + altoObjetivoPx * 0.28 &&
+            b.inicio > origenY + altoPlaneado * 0.28 &&
             b.inicio < finPagina &&
             b.fin > finPagina
           )
