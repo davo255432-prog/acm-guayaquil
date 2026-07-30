@@ -1704,7 +1704,7 @@
             ${ajusteLabel ? `<div class="mt-1">${ajusteLabel}</div>` : ''}
           </div>
         </div>
-        <div class="px-4 py-2 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-end gap-3 text-xs">
+        <div data-export-actions class="px-4 py-2 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-end gap-3 text-xs">
           ${l.url_fuente ? `<a href="${l.url_fuente}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 font-medium">↗ Abrir anuncio</a>` : ''}
           <label class="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">
             📷 ${imgSrc ? 'Cambiar captura' : 'Agregar captura'}
@@ -1812,6 +1812,7 @@
     const textoOrig = btn.textContent
     const app = document.getElementById('app')
     const acciones = document.getElementById('btn-informe-wrap')
+    const accionesComparables = [...document.querySelectorAll('[data-export-actions]')]
     const visorPdf = window.open('', '_blank')
     if (visorPdf) {
       visorPdf.document.write('<!doctype html><title>Preparando PDF</title><div style="font:16px Arial;padding:32px;color:#1e3a5f;">Preparando la vista completa. Esta pestaña mostrará el PDF al terminar…</div>')
@@ -1826,6 +1827,7 @@
 
       // Los botones de generación no forman parte de la evidencia exportada.
       acciones.style.display = 'none'
+      accionesComparables.forEach(el => { el.style.display = 'none' })
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
       const canvas = await html2canvas(app, {
@@ -1836,6 +1838,26 @@
         logging: false,
         windowWidth: document.documentElement.scrollWidth,
         windowHeight: app.scrollHeight,
+        onclone: clonedDoc => {
+          clonedDoc.querySelectorAll('#app select, #app input:not([type="hidden"]):not([type="file"])').forEach(control => {
+            const caja = clonedDoc.createElement('div')
+            caja.className = control.className
+            caja.textContent = control.tagName === 'SELECT'
+              ? (control.options[control.selectedIndex]?.text || '')
+              : (control.value || control.placeholder || '')
+            caja.style.height = `${Math.max(control.getBoundingClientRect().height, 40)}px`
+            caja.style.display = 'flex'
+            caja.style.alignItems = 'center'
+            caja.style.lineHeight = '1.25'
+            caja.style.overflow = 'hidden'
+            caja.style.background = '#fff'
+            caja.style.color = '#111827'
+            control.replaceWith(caja)
+          })
+          clonedDoc.querySelectorAll('[data-export-actions], #btn-buscar, #foto-limpiar').forEach(el => {
+            el.style.display = 'none'
+          })
+        },
       })
 
       const { jsPDF } = window.jspdf
@@ -1843,11 +1865,34 @@
       const anchoPagina = 210
       const altoPagina = 297
       const altoCortePx = Math.floor(canvas.width * altoPagina / anchoPagina)
+      const escalaCaptura = canvas.height / app.scrollHeight
+      const appTop = app.getBoundingClientRect().top
+      const bloquesProtegidos = [
+        ...document.querySelectorAll(
+          '#resultados > .mb-6, #estimacion-wrap, #conclusion-perito, #ficha-wrap, [data-comp-card]'
+        )
+      ].filter(el => el.offsetHeight > 0).map(el => {
+        const rect = el.getBoundingClientRect()
+        const top = rect.top - appTop
+        return {
+          inicio: Math.max(0, Math.floor(top * escalaCaptura)),
+          fin: Math.ceil((top + rect.height) * escalaCaptura),
+        }
+      })
       let origenY = 0
       let pagina = 0
 
       while (origenY < canvas.height) {
-        const altoActual = Math.min(altoCortePx, canvas.height - origenY)
+        let finPagina = Math.min(origenY + altoCortePx, canvas.height)
+        if (finPagina < canvas.height) {
+          const bloqueCortado = bloquesProtegidos.find(b =>
+            b.inicio > origenY + altoCortePx * 0.28 &&
+            b.inicio < finPagina &&
+            b.fin > finPagina
+          )
+          if (bloqueCortado) finPagina = bloqueCortado.inicio
+        }
+        const altoActual = Math.max(1, finPagina - origenY)
         const corte = document.createElement('canvas')
         corte.width = canvas.width
         corte.height = altoActual
@@ -1904,6 +1949,7 @@
       alert('No se pudo generar la vista completa. Intenta nuevamente o usa Imprimir / Descargar PDF desde la vista previa.')
     } finally {
       acciones.style.display = ''
+      accionesComparables.forEach(el => { el.style.display = '' })
       btn.textContent = textoOrig
       btn.disabled = false
     }
