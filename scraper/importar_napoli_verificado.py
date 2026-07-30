@@ -27,6 +27,7 @@ def ficha(
     titulo: str,
     url: str,
     amenidades: str = "",
+    activo: bool = True,
 ) -> dict:
     precio_m2 = round(precio / cubierta, 2) if cubierta else None
     return {
@@ -48,7 +49,7 @@ def ficha(
         "direccion": f"Urbanización Napoli · Vía a Salitre · {amenidades} · {FUENTE}",
         "url_fuente": url,
         "urbanizacion": "Napoli",
-        "activo": True,
+        "activo": activo,
         "fecha_scrape": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -140,6 +141,7 @@ LISTINGS = [
         precio=160000, total=185, cubierta=160, habitaciones=4, banos=4, parqueos=2,
         titulo="Casa modelo Florencia, Urbanización Napoli",
         amenidades="jacuzzi y dormitorio de servicio con baño",
+        activo=False,
         url="https://www.plusvalia.com/propiedades/clasificado/veclcain-en-venta-casa-modelo-florencia-urbanizacion-napoli-146675938.html",
     ),
 ]
