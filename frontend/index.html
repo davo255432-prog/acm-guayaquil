@@ -1827,15 +1827,23 @@
       accionesComparables.forEach(el => { el.style.display = 'none' })
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
+      const anchoExportacion = 820
+      let estructuraExportacion = { alto: 0, finContenido: 0, bloques: [] }
       const canvas = await html2canvas(app, {
         scale: 1.5,
         useCORS: true,
         allowTaint: false,
         backgroundColor: '#f9fafb',
         logging: false,
-        windowWidth: document.documentElement.scrollWidth,
-        windowHeight: app.scrollHeight,
+        width: anchoExportacion,
+        windowWidth: anchoExportacion,
         onclone: clonedDoc => {
+          clonedDoc.documentElement.style.width = `${anchoExportacion}px`
+          clonedDoc.body.style.width = `${anchoExportacion}px`
+          clonedDoc.body.style.margin = '0'
+          const clonedApp = clonedDoc.getElementById('app')
+          clonedApp.style.width = `${anchoExportacion}px`
+          clonedApp.style.maxWidth = `${anchoExportacion}px`
           clonedDoc.querySelectorAll('#app select, #app input:not([type="hidden"]):not([type="file"])').forEach(control => {
             const caja = clonedDoc.createElement('div')
             caja.className = control.className
@@ -1857,6 +1865,23 @@
           clonedDoc.querySelectorAll('#app input[type="file"]').forEach(el => {
             el.style.display = 'none'
           })
+          const appRect = clonedApp.getBoundingClientRect()
+          const footerRect = clonedApp.querySelector('footer')?.getBoundingClientRect()
+          estructuraExportacion = {
+            alto: clonedApp.scrollHeight,
+            finContenido: footerRect ? footerRect.bottom - appRect.top : clonedApp.scrollHeight,
+            bloques: [
+              ...clonedDoc.querySelectorAll(
+                '#resultados > .mb-6, #estimacion-wrap, #conclusion-perito, #ficha-wrap, [data-comp-card]'
+              )
+            ].filter(el => el.offsetHeight > 0).map(el => {
+              const rect = el.getBoundingClientRect()
+              return {
+                inicio: Math.max(0, rect.top - appRect.top),
+                fin: rect.bottom - appRect.top,
+              }
+            }),
+          }
         },
       })
 
@@ -1865,41 +1890,43 @@
       const anchoPagina = 210
       const altoPagina = 297
       const altoCortePx = Math.floor(canvas.width * altoPagina / anchoPagina)
-      const paginasNaturales = Math.max(1, Math.ceil(canvas.height / altoCortePx))
-      const paginasObjetivo = Math.max(paginasNaturales, _listings.length >= 8 ? 3 : 1)
-      const ultimoFragmento = canvas.height % altoCortePx
-      const equilibrarPaginas = paginasObjetivo > paginasNaturales ||
-        (paginasObjetivo > 1 && ultimoFragmento > 0 && ultimoFragmento < altoCortePx * 0.35)
-      const escalaCaptura = canvas.height / app.scrollHeight
-      const appTop = app.getBoundingClientRect().top
-      const bloquesProtegidos = [
-        ...document.querySelectorAll(
-          '#resultados > .mb-6, #estimacion-wrap, #conclusion-perito, #ficha-wrap, [data-comp-card]'
-        )
-      ].filter(el => el.offsetHeight > 0).map(el => {
-        const rect = el.getBoundingClientRect()
-        const top = rect.top - appTop
-        return {
-          inicio: Math.max(0, Math.floor(top * escalaCaptura)),
-          fin: Math.ceil((top + rect.height) * escalaCaptura),
-        }
-      })
+      // Las posiciones del clon se convierten a píxeles usando la escala
+      // horizontal real; la altura del canvas puede incluir espacio de viewport.
+      const escalaCaptura = canvas.width / anchoExportacion
+      const altoContenidoPx = Math.min(
+        canvas.height,
+        Math.ceil((estructuraExportacion.finContenido || estructuraExportacion.alto || canvas.height) * escalaCaptura)
+      )
+      const bloquesProtegidos = estructuraExportacion.bloques.map(b => ({
+        inicio: Math.floor(b.inicio * escalaCaptura),
+        fin: Math.ceil(b.fin * escalaCaptura),
+      }))
       let origenY = 0
       let pagina = 0
 
-      while (origenY < canvas.height) {
-        const paginasRestantes = Math.max(1, paginasObjetivo - pagina)
-        const altoPlaneado = equilibrarPaginas
-          ? Math.min(altoCortePx, Math.ceil((canvas.height - origenY) / paginasRestantes))
+      while (origenY < altoContenidoPx) {
+        const contenidoRestante = altoContenidoPx - origenY
+        // Absorbe un remanente mínimo de espacio de viewport en la última
+        // página, evitando crear una cuarta hoja visualmente vacía.
+        const altoPlaneado = contenidoRestante <= altoCortePx * 1.03
+          ? contenidoRestante
           : altoCortePx
-        let finPagina = Math.min(origenY + altoPlaneado, canvas.height)
-        if (finPagina < canvas.height) {
+        let finPagina = Math.min(origenY + altoPlaneado, altoContenidoPx)
+        if (finPagina < altoContenidoPx) {
           const bloqueCortado = bloquesProtegidos.find(b =>
-            b.inicio > origenY + altoPlaneado * 0.28 &&
+            b.inicio > origenY &&
             b.inicio < finPagina &&
             b.fin > finPagina
           )
-          if (bloqueCortado) finPagina = bloqueCortado.inicio
+          if (bloqueCortado) {
+            const llenarHastaInicio = bloqueCortado.inicio - origenY
+            const extenderHastaFin = bloqueCortado.fin - origenY
+            if (extenderHastaFin <= altoCortePx && bloqueCortado.fin - finPagina <= altoPlaneado * 0.12) {
+              finPagina = bloqueCortado.fin
+            } else if (llenarHastaInicio >= altoPlaneado * 0.72) {
+              finPagina = bloqueCortado.inicio
+            }
+          }
         }
         const altoActual = Math.max(1, finPagina - origenY)
         const corte = document.createElement('canvas')
