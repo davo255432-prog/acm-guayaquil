@@ -1827,7 +1827,7 @@
       accionesComparables.forEach(el => { el.style.display = 'none' })
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-      const anchoExportacion = 820
+      const anchoExportacion = 850
       let estructuraExportacion = { alto: 0, finContenido: 0, bloques: [] }
       const canvas = await html2canvas(app, {
         scale: 1.5,
@@ -1864,6 +1864,10 @@
           })
           clonedDoc.querySelectorAll('#app input[type="file"]').forEach(el => {
             el.style.display = 'none'
+          })
+          clonedDoc.querySelectorAll('[data-comp-card] p').forEach(el => {
+            el.style.lineHeight = '1.5'
+            el.style.paddingBottom = '2px'
           })
           const appRect = clonedApp.getBoundingClientRect()
           const footerRect = clonedApp.querySelector('footer')?.getBoundingClientRect()
