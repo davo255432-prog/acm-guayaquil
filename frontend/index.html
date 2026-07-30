@@ -1813,10 +1813,6 @@
     const app = document.getElementById('app')
     const acciones = document.getElementById('btn-informe-wrap')
     const accionesComparables = [...document.querySelectorAll('[data-export-actions]')]
-    const visorPdf = window.open('', '_blank')
-    if (visorPdf) {
-      visorPdf.document.write('<!doctype html><title>Preparando PDF</title><div style="font:16px Arial;padding:32px;color:#1e3a5f;">Preparando la vista completa. Esta pestaña mostrará el PDF al terminar…</div>')
-    }
     btn.textContent = 'Preparando vista…'
     btn.disabled = true
 
@@ -1913,39 +1909,9 @@
       }
 
       const nombreArchivo = `Vista-actual-${(_urb || _sector).replace(/\s+/g,'-')}-${new Date().toISOString().slice(0,10)}.pdf`
-      if (visorPdf) {
-        const blob = pdf.output('blob')
-        const blobUrl = URL.createObjectURL(blob)
-        visorPdf.document.open()
-        visorPdf.document.write(`<!doctype html>
-          <html lang="es">
-          <head>
-            <meta charset="utf-8">
-            <title>${nombreArchivo}</title>
-            <style>
-              html,body{margin:0;height:100%;background:#374151;font-family:Arial,sans-serif}
-              .barra{height:58px;box-sizing:border-box;padding:10px 18px;background:#0f2748;color:white;display:flex;align-items:center;justify-content:space-between;gap:16px}
-              .barra span{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-              .barra a{flex-shrink:0;background:#c9a84c;color:#0f2748;text-decoration:none;font-weight:700;padding:10px 18px;border-radius:8px}
-              iframe{display:block;width:100%;height:calc(100% - 58px);border:0;background:white}
-            </style>
-          </head>
-          <body>
-            <div class="barra">
-              <span>Vista actual completa · ${_urb || _sector}</span>
-              <a href="${blobUrl}" download="${nombreArchivo}">Descargar PDF</a>
-            </div>
-            <iframe src="${blobUrl}" title="Vista actual en PDF"></iframe>
-          </body>
-          </html>`)
-        visorPdf.document.close()
-        visorPdf.addEventListener('beforeunload', () => URL.revokeObjectURL(blobUrl), { once:true })
-      } else {
-        pdf.save(nombreArchivo)
-      }
+      pdf.save(nombreArchivo)
     } catch (error) {
       console.error('[VISTA PDF]', error)
-      if (visorPdf && !visorPdf.closed) visorPdf.close()
       alert('No se pudo generar la vista completa. Intenta nuevamente o usa Imprimir / Descargar PDF desde la vista previa.')
     } finally {
       acciones.style.display = ''
