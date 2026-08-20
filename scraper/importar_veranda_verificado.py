@@ -23,6 +23,12 @@ REGISTROS_DUPLICADOS = [
     "b124d8e6-8a58-4e92-9c9f-bcfadffbb8c9",
 ]
 
+# Fuentes conservadas como historial, pero retiradas del ACM porque ya no
+# permiten verificar un anuncio individual.
+FUENTES_RETIRADAS = [
+    "https://www.fazwaz.com.ec/propiedad-3-habitacion-en-venta/ecuador/guayas/guayaquil?page=18",
+]
+
 
 def ficha(
     *,
@@ -75,10 +81,10 @@ LISTINGS = [
         url="https://inmnovagroup.com/casa-venta-nueva-zona-guayaquil/7502713",
     ),
     ficha(
-        precio=126000, total=123, cubierta=134, habitaciones=3, banos=3, parqueos=None,
-        titulo="Casa de venta, Urb. Veranda, Av. Narcisa de Jesús",
-        amenidades="año 2013 · usada normal",
-        url="https://www.fazwaz.com.ec/propiedad-3-habitacion-en-venta/ecuador/guayas/guayaquil?page=18",
+        precio=145000, total=122, cubierta=123, habitaciones=3, banos=2, parqueos=2,
+        titulo="Casa de 3 dormitorios en venta en Urbanización Veranda",
+        amenidades="año 2012 · 2,5 baños · sala de TV · garaje para 2 carros",
+        url="https://www.buscocasita.com/venta-de-casa-en-urbanizacion-veranda-guayaquil_145906.html",
     ),
     ficha(
         precio=128000, total=138, cubierta=141, habitaciones=3, banos=2, parqueos=2,
@@ -112,6 +118,9 @@ def main() -> None:
     client.table("listings").update({"activo": False}).in_(
         "id", REGISTROS_DUPLICADOS
     ).execute()
+    client.table("listings").update({"activo": False}).in_(
+        "url_fuente", FUENTES_RETIRADAS
+    ).execute()
 
     result = client.table("listings").upsert(
         LISTINGS,
@@ -125,7 +134,8 @@ def main() -> None:
         )
     print(
         f"Veranda: {guardados} fichas verificadas; "
-        f"{len(REGISTROS_DUPLICADOS)} copias antiguas conservadas como inactivas"
+        f"{len(REGISTROS_DUPLICADOS)} copias antiguas y "
+        f"{len(FUENTES_RETIRADAS)} fuente no verificable conservadas como inactivas"
     )
 
 
