@@ -90,6 +90,7 @@ URBANIZACIONES = {
         "vistana", "la-aurora", "plaza-madeira",
     ],
     "q-narcisa-de-jesus": [
+        "veranda",
         "metropolis", "ciudad-del-rio", "la-perla",
         "acuarela-del-rio", "paraiso-del-rio", "victoria-del-rio",
         "narcisa-club", "horizonte-dorado", "la-romareda",
