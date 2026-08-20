@@ -1038,6 +1038,86 @@
   let _printNative = false
   let _alertaComparables = null // { nivel: 'leve'|'fuerte'|'bloqueo', n, precioRef, descartados }
 
+  // Último formulario: se conserva únicamente en este navegador.
+  const BORRADOR_KEY = 'acm-ultimo-inmueble-v1'
+  const BORRADOR_CAMPOS = [
+    'sector', 'tipo', 'urbanizacion', 'subzona', 'habitaciones', 'banos',
+    'parqueos', 'pisos', 'acabados', 'piscina', 'servicio', 'bano-servicio',
+    'inmueble-estado', 'area-total', 'area-construccion', 'cliente-nombre',
+    'cliente-email', 'inmueble-direccion', 'agente-notas'
+  ]
+
+  function guardarBorrador() {
+    const datos = {}
+    BORRADOR_CAMPOS.forEach(id => {
+      const el = document.getElementById(id)
+      if (el) datos[id] = el.value
+    })
+    try { localStorage.setItem(BORRADOR_KEY, JSON.stringify(datos)) } catch (e) {
+      console.warn('[BORRADOR] No se pudo guardar el formulario:', e)
+    }
+  }
+
+  function abrirFotosBorrador() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('acm-borrador', 1)
+      req.onupgradeneeded = () => req.result.createObjectStore('fotos')
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => reject(req.error)
+    })
+  }
+
+  async function guardarFotoBorrador(archivo) {
+    try {
+      const dbFotos = await abrirFotosBorrador()
+      const tx = dbFotos.transaction('fotos', 'readwrite')
+      tx.objectStore('fotos').put(archivo, 'principal')
+    } catch (e) { console.warn('[BORRADOR] No se pudo guardar la foto:', e) }
+  }
+
+  async function eliminarFotoBorrador() {
+    try {
+      const dbFotos = await abrirFotosBorrador()
+      dbFotos.transaction('fotos', 'readwrite').objectStore('fotos').delete('principal')
+    } catch (e) { console.warn('[BORRADOR] No se pudo eliminar la foto:', e) }
+  }
+
+  function marcarEstado(valor) {
+    document.querySelectorAll('.pill-estado').forEach(b => {
+      const activo = b.dataset.val === valor
+      b.style.background = activo ? '#0f2748' : '#fff'
+      b.style.color = activo ? 'white' : '#374151'
+      b.style.borderColor = activo ? '#0f2748' : '#d1d5db'
+    })
+    document.getElementById('inmueble-estado').value = valor || ''
+  }
+
+  async function restaurarBorrador() {
+    try {
+      const datos = JSON.parse(localStorage.getItem(BORRADOR_KEY) || '{}')
+      BORRADOR_CAMPOS.forEach(id => {
+        const el = document.getElementById(id)
+        if (el && datos[id] !== undefined) el.value = datos[id]
+      })
+      marcarEstado(datos['inmueble-estado'] || '')
+    } catch (e) { console.warn('[BORRADOR] No se pudo restaurar el formulario:', e) }
+
+    try {
+      const dbFotos = await abrirFotosBorrador()
+      const req = dbFotos.transaction('fotos', 'readonly').objectStore('fotos').get('principal')
+      req.onsuccess = () => {
+        if (!req.result) return
+        const reader = new FileReader()
+        reader.onload = e => {
+          _fotoInmueble = e.target.result
+          document.getElementById('foto-preview').src = _fotoInmueble
+          document.getElementById('foto-preview-wrap').classList.remove('hidden')
+        }
+        reader.readAsDataURL(req.result)
+      }
+    } catch (e) { console.warn('[BORRADOR] No se pudo restaurar la foto:', e) }
+  }
+
   function precioRef(listings) {
     const precios = listings.map(l => l.precio).filter(p => p > 0)
     if (!precios.length) return null
@@ -1085,29 +1165,38 @@
       document.getElementById('foto-preview-wrap').classList.remove('hidden')
     }
     reader.readAsDataURL(file)
+    guardarFotoBorrador(file)
   })
   document.getElementById('foto-limpiar').addEventListener('click', () => {
     _fotoInmueble = null
     document.getElementById('foto-inmueble').value = ''
     document.getElementById('foto-preview').src = ''
     document.getElementById('foto-preview-wrap').classList.add('hidden')
+    eliminarFotoBorrador()
   })
 
   // ── Estado pills ──
   document.querySelectorAll('.pill-estado').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.pill-estado').forEach(b => {
-        b.style.background = '#fff'; b.style.color = '#374151'; b.style.borderColor = '#d1d5db'
-      })
-      btn.style.background = '#0f2748'; btn.style.color = 'white'; btn.style.borderColor = '#0f2748'
-      document.getElementById('inmueble-estado').value = btn.dataset.val
+      marcarEstado(btn.dataset.val)
+      guardarBorrador()
     })
   })
+
+  BORRADOR_CAMPOS.forEach(id => {
+    const el = document.getElementById(id)
+    if (el && el.type !== 'hidden') {
+      el.addEventListener('input', guardarBorrador)
+      el.addEventListener('change', guardarBorrador)
+    }
+  })
+  restaurarBorrador()
 
   // ── Búsqueda ──
   document.getElementById('btn-buscar').addEventListener('click', buscar)
 
   async function buscar() {
+    guardarBorrador()
     const sector       = document.getElementById('sector').value
     const tipo         = document.getElementById('tipo').value
     const urbanizacion = document.getElementById('urbanizacion').value.trim()
