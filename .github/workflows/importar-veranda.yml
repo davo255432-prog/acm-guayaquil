@@ -1,0 +1,23 @@
+name: Importar muestra verificada Veranda
+
+on:
+  workflow_dispatch:
+
+jobs:
+  importar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install --no-cache-dir -r scraper/requirements.txt
+
+      - name: Importar anuncios verificados de Veranda
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scraper/importar_veranda_verificado.py

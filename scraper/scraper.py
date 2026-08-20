@@ -271,6 +271,7 @@ _KEYWORD_URB = [
     ("portal del rio",    "Portal Del Rio"),
     ("los cerezos",       "Los Cerezos"),
     # Narcisa de Jesús
+    ("veranda",          "Veranda"),
     ("metropolis",        "Metrópolis"),
     ("ciudad del rio",    "Ciudad Del Rio"),
     ("la perla",          "La Perla"),
